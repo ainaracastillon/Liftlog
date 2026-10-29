@@ -403,10 +403,30 @@ app.delete("/api/admin/users/:id", auth, admin, async (req, res, next) => {
   }
 });
 
+const BUILD = process.env.RENDER_GIT_COMMIT || String(Date.now());
+app.get("/api/version", (req, res) => { noCacheHdr(res); res.json({ build: BUILD }); });
 app.get("/healthz", (req, res) => res.send("ok"));
 app.use("/api", (req, res) => res.status(404).json({ error: "No encontrado" }));
-app.use(express.static(path.join(__dirname, "public"), { maxAge: "1h" }));
-app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+// La página y el manifest nunca se guardan en caché: así cada cambio llega al momento.
+const noCache = (res) => noCacheHdr(res);
+function noCacheHdr(res) {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+}
+app.use(
+  express.static(path.join(__dirname, "public"), {
+    etag: true,
+    setHeaders: (res, file) => {
+      if (/\.(html|json)$/.test(file)) noCache(res);
+      else res.setHeader("Cache-Control", "public, max-age=86400");
+    },
+  })
+);
+app.get("*", (req, res) => {
+  noCache(res);
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 app.use((err, req, res, next) => {
   console.error(err);

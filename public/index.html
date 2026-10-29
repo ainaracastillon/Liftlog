@@ -726,6 +726,18 @@ async function reloadData(){
   finally{reloading=false;$("#reload").classList.remove("spin")}
 }
 
+/* Actualización automática: si hay una versión nueva en el servidor, la app se recarga sola */
+let BUILD0=null;
+async function checkUpdate(){
+  if(!document.documentElement.dataset.mode)return;
+  try{const r=await fetch("/api/version?t="+Date.now(),{cache:"no-store"});const {build}=await r.json();
+    if(BUILD0===null){BUILD0=build;return}
+    if(build!==BUILD0){if(store&&typeof flushWrites==="function")await flushWrites();location.reload()}
+  }catch(e){}
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkUpdate()});
+setInterval(checkUpdate,5*60*1000);
+
 render();
 
 /* ---------- guardado en la cuenta ---------- */
@@ -950,7 +962,7 @@ function vPerfiles(){
     const r=await fetch("/api/me",{credentials:"same-origin"});
     const ct=r.headers.get("content-type")||"";
     if(ct.includes("application/json")){
-      document.documentElement.dataset.mode="server";
+      document.documentElement.dataset.mode="server";checkUpdate();
       if(r.ok){const j=await r.json();await startServer(j.user,false)}else showAuth();
       return;
     }
