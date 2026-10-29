@@ -736,7 +736,9 @@ async function checkUpdate(){
   }catch(e){}
 }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkUpdate()});
-setInterval(checkUpdate,5*60*1000);
+setInterval(()=>{if(document.visibilityState==="visible")checkUpdate()},30*1000);
+window.addEventListener("focus",checkUpdate);
+window.addEventListener("pageshow",e=>{if(e.persisted)location.reload()});
 
 render();
 
