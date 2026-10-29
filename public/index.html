@@ -50,8 +50,8 @@ header.top .wrap{display:flex;align-items:center;gap:10px;padding-block:10px}
 .sync.ok i{background:var(--accent-2)}
 main{padding-block:16px 110px}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
-nav.tabs button{background:none;border:0;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;font-weight:500;color:var(--muted)}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+nav.tabs button{background:none;border:0;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;min-width:0;font-weight:500;color:var(--muted)}
 nav.tabs button svg{width:22px;height:22px}
 nav.tabs button[aria-current="page"]{color:var(--accent)}
 h2.sec{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.05;margin:0;text-wrap:balance}
@@ -168,6 +168,25 @@ body.locked nav.tabs,body.locked #avatar,body.locked #sync{display:none}
 .adm-top{display:flex;justify-content:space-between;align-items:center}
 .check{display:flex;gap:8px;align-items:center;font-size:14px}
 .check input{width:18px;height:18px;accent-color:var(--accent)}
+.reload{width:34px;height:34px;border-radius:50%;margin-right:2px}
+.reload.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.exbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-bottom:10px}
+.exlist{display:flex;flex-direction:column;gap:8px}
+.excard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.excard>button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;background:none;border:0;padding:12px 14px;text-align:left}
+.excard>button b{font-weight:600;font-size:15.5px;display:block}
+.excard>button .hint{display:block;margin-top:2px}
+.gtag{font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.exbody{padding:0 14px 14px;border-top:1px solid var(--line)}
+.exbody ol{margin:12px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.exbody .tip{margin-top:10px;background:var(--surface-2);border-radius:10px;padding:9px 11px;font-size:13.5px}
+.exmeta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:13px;color:var(--muted)}
+.exmeta b{color:var(--fg);font-weight:600}
+.inr{font-size:12px;font-weight:600;color:var(--up)}
+.exadd{display:flex;gap:8px;margin-top:12px}
+.exadd select{flex:1;min-width:0}
+mark{background:var(--accent-soft);color:inherit;border-radius:3px;padding:0 1px}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 </style>
@@ -179,6 +198,7 @@ body.locked nav.tabs,body.locked #avatar,body.locked #sync{display:none}
   <svg width="38" height="38" viewBox="0 0 72 72" aria-hidden="true"><rect width="72" height="72" rx="16" fill="#0F6E56"/><rect x="10" y="30" width="52" height="4" rx="2" fill="#E1F5EE"/><rect x="14" y="20" width="7" height="24" rx="2" fill="#5DCAA5"/><rect x="51" y="20" width="7" height="24" rx="2" fill="#5DCAA5"/><rect x="21" y="24" width="4" height="16" rx="1.5" fill="#9FE1CB"/><rect x="47" y="24" width="4" height="16" rx="1.5" fill="#9FE1CB"/><rect x="18" y="52" width="36" height="3" rx="1.5" fill="#9FE1CB"/><rect x="18" y="58" width="22" height="3" rx="1.5" fill="#5DCAA5"/></svg>
   <div class="brand">Liftlog<small>Tu libreta de gym</small></div>
   <div class="sync" id="sync"><i></i><span>En este móvil</span></div>
+  <button class="iconbtn reload" id="reload" data-act="reload" aria-label="Recargar datos" title="Recargar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
   <button class="avatar" id="avatar" data-act="profiles" aria-label="Usuarios y cuenta">?</button>
 </div></header>
 
@@ -188,6 +208,7 @@ body.locked nav.tabs,body.locked #avatar,body.locked #sync{display:none}
   <button data-tab="entreno"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>Entreno</button>
   <button data-tab="calendario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Calendario</button>
   <button data-tab="rutina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>Rutina</button>
+  <button data-tab="ejercicios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>Ejercicios</button>
   <button data-tab="progreso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16M5 15l4-4 4 3 6-7"/></svg>Progreso</button>
 </div></nav>
 
@@ -241,13 +262,15 @@ const profById=id=>ALL.profiles.find(p=>p.id===id);
 const initials=n=>(String(n||"?").trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2)||"?").toUpperCase();
 
 function saveLocal(){try{localStorage.setItem(LS_KEY2,JSON.stringify(ALL))}catch(e){}}
+const pendingW={};
+async function runWrite(dockey){const fn=pendingW[dockey];if(!fn)return;delete pendingW[dockey];clearTimeout(timers[dockey]);try{await fn(store.ref(dockey));setSync(true)}catch(e){setSync(false,"Sin conexión")}}
+async function flushWrites(){await Promise.all(Object.keys(pendingW).map(runWrite))}
 function writeDoc(dockey,fn){
   saveLocal();
   if(!store)return;
+  pendingW[dockey]=fn;
   clearTimeout(timers[dockey]);
-  timers[dockey]=setTimeout(async()=>{
-    try{await fn(store.ref(dockey));setSync(true)}catch(e){setSync(false,"Sin conexión")}
-  },500);
+  timers[dockey]=setTimeout(()=>runWrite(dockey),500);
 }
 function persist(key,pid=ALL.active){
   const D=ALL.data[pid];
@@ -407,7 +430,7 @@ function chartSVG(pts){
 function render(){
   document.querySelectorAll("nav.tabs button").forEach(b=>{if(b.dataset.tab===ui.tab)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
   const P=profById(ALL.active)||ALL.profiles[0];const av=$("#avatar");const nm=SERVER?SERVER.user.name:P.name;av.textContent=initials(nm);av.style.background=SERVER?COLORS[0]:P.color;av.title=nm;
-  $("#view").innerHTML=ui.tab==="entreno"?vEntreno():ui.tab==="calendario"?vCal():ui.tab==="rutina"?vRutina():ui.tab==="perfiles"?vPerfiles():ui.tab==="admin"?vAdmin():vProgreso();
+  $("#view").innerHTML=ui.tab==="entreno"?vEntreno():ui.tab==="calendario"?vCal():ui.tab==="rutina"?vRutina():ui.tab==="perfiles"?vPerfiles():ui.tab==="admin"?vAdmin():ui.tab==="ejercicios"?vEjercicios():vProgreso();
 }
 
 /* ---------- edición de registros ---------- */
@@ -468,10 +491,193 @@ document.addEventListener("click",e=>{
     case"delprof":ui.confirm="delprof:"+id;break;
     case"delprofyes":{if(ALL.profiles.length<2)break;const D=ALL.data[id];ALL.profiles=ALL.profiles.filter(p=>p.id!==id);if(store&&D){store.ref(keyFor(id,"routine")).delete().catch(()=>{});for(const d in D.logs)store.ref(keyFor(id,"log-"+d)).delete().catch(()=>{})}delete ALL.data[id];if(ALL.active===id)switchProfile(ALL.profiles[0].id);persistProfiles();ui.confirm=null;toast("Usuario eliminado");break}
     case"logout":logout();return;
+    case"reload":reloadData();return;
+    case"exopen":{const i=+b.dataset.i;EXQ.open=EXQ.open===i?null:i;break}
+    case"exclear":EXQ.q="";EXQ.g="";EXQ.open=null;break;
+    case"exadd":{const i=+b.dataset.i;const e=EXERCISES[i];const sel=document.getElementById("exday-"+i);const d=dayById(sel.value);if(!d)break;d.ex.push({id:uid(),name:e.n,sets:4,reps:"12"});persist("routine");toast(e.n+" añadido a "+d.name);break}
     case"delex":{const d=dayById(b.dataset.day);d.ex=d.ex.filter(z=>z.id!==id);persist("routine");break}
   }
   render();
 });
+
+const EXERCISES=[
+/* ---------------- PECHO ---------------- */
+{n:"Press de banca con barra",g:"Pecho",m:"Pectoral mayor, deltoides anterior, tríceps",e:"Barra y banco plano",s:["Túmbate con los ojos bajo la barra, pies firmes en el suelo y escápulas juntas y hacia abajo.","Agarra la barra algo más ancho que los hombros y sácala del soporte con los brazos estirados.","Baja controlando hasta rozar la parte baja del pecho, con los codos a unos 45° del cuerpo.","Empuja hacia arriba sin despegar glúteos ni hombros del banco."],t:"Mantén un ligero arco lumbar y no rebotes la barra en el pecho."},
+{n:"Press inclinado con barra",g:"Pecho",m:"Pectoral superior (clavicular), deltoides anterior, tríceps",e:"Barra y banco inclinado",s:["Ajusta el banco a 30–45°.","Agarra la barra algo más ancho que los hombros.","Bájala hasta la parte alta del pecho, bajo las clavículas.","Empuja en vertical hasta estirar los brazos."],t:"Más de 45° convierte el ejercicio en un press de hombro."},
+{n:"Press declinado con barra",g:"Pecho",m:"Pectoral inferior, tríceps",e:"Barra y banco declinado",s:["Engancha los pies en el banco declinado.","Saca la barra con los brazos estirados sobre el pecho.","Baja hasta la parte baja del pecho.","Empuja hasta arriba sin bloquear de golpe los codos."],t:"Pide ayuda para sacar y dejar la barra."},
+{n:"Press plano con mancuernas",g:"Pecho",m:"Pectoral mayor, deltoides anterior, tríceps",e:"Mancuernas y banco plano",s:["Siéntate con las mancuernas sobre los muslos y túmbate llevándolas al pecho.","Empuja hasta arriba con las palmas mirando a los pies.","Baja abriendo los codos a unos 45° hasta sentir estiramiento en el pecho.","Sube juntando ligeramente las mancuernas arriba."],t:"Permite más recorrido que la barra; no choques las mancuernas."},
+{n:"Press inclinado con mancuernas",g:"Pecho",m:"Pectoral superior, deltoides anterior, tríceps",e:"Mancuernas y banco inclinado",s:["Banco a 30–45°, mancuernas a la altura del pecho.","Empuja hacia arriba y ligeramente hacia dentro.","Baja lento hasta que los codos queden algo por debajo del banco.","Repite sin perder la retracción de escápulas."],t:"Ideal para trabajar la parte alta del pecho."},
+{n:"Press en máquina de pecho",g:"Pecho",m:"Pectoral mayor, tríceps, deltoides anterior",e:"Máquina de press",s:["Ajusta el asiento para que las asas queden a la altura de la mitad del pecho.","Apoya la espalda y junta escápulas.","Empuja las asas hasta casi estirar los brazos.","Vuelve despacio hasta notar el estiramiento."],t:"Buena opción para entrenar cerca del fallo con seguridad."},
+{n:"Aperturas con mancuernas",g:"Pecho",m:"Pectoral mayor",e:"Mancuernas y banco",s:["Túmbate con las mancuernas arriba, palmas enfrentadas y codos un poco flexionados.","Abre los brazos en arco hasta sentir estiramiento en el pecho.","Cierra el arco como si abrazaras un árbol.","Mantén el mismo ángulo del codo todo el recorrido."],t:"Usa menos peso que en el press; el hombro sufre si bajas demasiado."},
+{n:"Aperturas en máquina (contractora)",g:"Pecho",m:"Pectoral mayor",e:"Máquina contractora (pec deck)",s:["Ajusta el asiento para que las asas queden a la altura del pecho.","Con los codos ligeramente flexionados, junta las asas delante de ti.","Aprieta el pecho un segundo.","Abre controlando hasta notar el estiramiento."],t:"No dejes que los hombros se adelanten."},
+{n:"Cruce de poleas",g:"Pecho",m:"Pectoral mayor (según la altura de la polea)",e:"Poleas",s:["Coloca las poleas altas y agarra una con cada mano.","Da un paso al frente con el torso algo inclinado.","Lleva las manos hacia abajo y al centro en arco.","Vuelve despacio sin perder la tensión."],t:"Poleas bajas trabajan más el pecho superior; altas, el inferior."},
+{n:"Flexiones",g:"Pecho",m:"Pectoral, tríceps, deltoides anterior, core",e:"Peso corporal",s:["Manos algo más anchas que los hombros, cuerpo recto de cabeza a talones.","Baja el pecho hasta casi tocar el suelo con los codos a 45°.","Empuja el suelo hasta estirar los brazos.","Mantén el abdomen y los glúteos apretados."],t:"Para facilitarlo, apoya las rodillas o las manos en un banco."},
+{n:"Fondos en paralelas para pecho",g:"Pecho",m:"Pectoral inferior, tríceps, deltoides anterior",e:"Paralelas",s:["Sujétate en las paralelas con los brazos estirados.","Inclina el torso hacia delante.","Baja hasta que los hombros queden a la altura de los codos.","Empuja hacia arriba manteniendo la inclinación."],t:"Si es duro, usa la máquina asistida o una goma."},
+{n:"Pullover con mancuerna",g:"Pecho",m:"Pectoral mayor, dorsal ancho, serrato",e:"Mancuerna y banco",s:["Túmbate atravesado o a lo largo del banco y sujeta una mancuerna con las dos manos sobre el pecho.","Con los codos un poco flexionados, llévala hacia atrás por encima de la cabeza.","Baja hasta notar el estiramiento en pecho y dorsales.","Vuelve en arco hasta encima del pecho."],t:"Mantén la cadera baja y el movimiento lento."},
+{n:"Press Svend",g:"Pecho",m:"Pectoral (porción interna)",e:"Disco o mancuerna",s:["Sujeta un disco entre las palmas a la altura del pecho.","Apriétalo con fuerza.","Estira los brazos hacia delante sin dejar de apretar.","Vuelve al pecho y repite."],t:"Buen ejercicio de acabado con poco peso."},
+/* ---------------- ESPALDA ---------------- */
+{n:"Dominadas",g:"Espalda",m:"Dorsal ancho, bíceps, romboides, trapecio inferior",e:"Barra fija",s:["Cuélgate con agarre prono algo más ancho que los hombros.","Baja las escápulas antes de tirar.","Sube llevando el pecho hacia la barra hasta pasar la barbilla.","Baja controlando hasta estirar los brazos."],t:"Usa una goma o la máquina asistida si aún no te salen."},
+{n:"Dominadas supinas (chin-ups)",g:"Espalda",m:"Dorsal ancho, bíceps",e:"Barra fija",s:["Agarra la barra con las palmas hacia ti, a la anchura de los hombros.","Tira hasta pasar la barbilla de la barra.","Mantén el cuerpo sin balanceos.","Baja despacio hasta estirar."],t:"Más fácil que la prona y trabaja mucho el bíceps."},
+{n:"Jalón al pecho",g:"Espalda",m:"Dorsal ancho, redondo mayor, bíceps",e:"Polea alta",s:["Siéntate con los muslos bajo los rodillos y agarra la barra ancha.","Inclina el torso un poco hacia atrás y saca pecho.","Tira de la barra hasta la parte alta del pecho llevando los codos hacia abajo.","Sube controlando hasta estirar los brazos."],t:"No tires con los brazos: piensa en llevar los codos a los bolsillos."},
+{n:"Jalón con agarre estrecho",g:"Espalda",m:"Dorsal ancho, bíceps",e:"Polea alta con agarre en V",s:["Siéntate y agarra el triángulo.","Tira hacia el esternón con el pecho alto.","Junta escápulas al final.","Sube despacio."],t:"Más recorrido y énfasis en la parte baja del dorsal."},
+{n:"Remo con barra",g:"Espalda",m:"Dorsal ancho, romboides, trapecio, deltoides posterior, bíceps",e:"Barra",s:["De pie, inclina el torso unos 45° con la espalda recta y las rodillas algo flexionadas.","Agarra la barra a la anchura de los hombros.","Llévala hacia el ombligo juntando las escápulas.","Baja controlando sin redondear la espalda."],t:"Si se te curva la espalda, baja el peso."},
+{n:"Remo gironda (remo en polea baja)",g:"Espalda",m:"Dorsal ancho, romboides, trapecio medio, bíceps",e:"Polea baja con agarre en V",s:["Siéntate con los pies en la plataforma y las rodillas algo flexionadas.","Con la espalda recta, tira del agarre hacia el abdomen.","Junta las escápulas y saca pecho al final.","Estira los brazos dejando que la espalda se alargue sin redondearse."],t:"No balancees el tronco para mover más peso."},
+{n:"Remo con mancuerna a una mano",g:"Espalda",m:"Dorsal ancho, romboides, bíceps",e:"Mancuerna y banco",s:["Apoya rodilla y mano del mismo lado en el banco.","Con la otra mano sujeta la mancuerna con el brazo estirado.","Tira llevando el codo hacia la cadera.","Baja despacio hasta estirar."],t:"Mantén la espalda paralela al suelo y sin girar."},
+{n:"Remo en máquina",g:"Espalda",m:"Dorsal, romboides, trapecio medio",e:"Máquina de remo",s:["Apoya el pecho en el soporte.","Agarra las asas con los brazos estirados.","Tira juntando las escápulas.","Vuelve despacio."],t:"El apoyo en el pecho protege la zona lumbar."},
+{n:"Remo en T",g:"Espalda",m:"Dorsal, trapecio, romboides",e:"Barra en T o barra en esquina",s:["Colócate sobre la barra con el torso inclinado y la espalda recta.","Agarra el asa con las dos manos.","Tira hacia el pecho juntando escápulas.","Baja sin redondear."],t:"Permite cargar mucho con buena postura."},
+{n:"Pull over en polea",g:"Espalda",m:"Dorsal ancho, redondo mayor",e:"Polea alta con barra o cuerda",s:["De pie frente a la polea, inclina el torso y estira los brazos al frente.","Con los codos casi rectos, baja la barra en arco hasta los muslos.","Aprieta los dorsales abajo.","Sube controlando."],t:"Aísla el dorsal sin que trabaje el bíceps."},
+{n:"Pull over tumbado",g:"Espalda",m:"Dorsal ancho, pectoral, serrato",e:"Mancuerna o barra y banco",s:["Túmbate en el banco con el peso sobre el pecho.","Con los codos un poco flexionados, llévalo por detrás de la cabeza.","Baja hasta notar el estiramiento.","Vuelve tirando con los dorsales."],t:"No arquees la espalda para bajar más."},
+{n:"Peso muerto",g:"Espalda",m:"Erectores espinales, glúteo, isquiotibiales, trapecio, antebrazo",e:"Barra",s:["Pies a la anchura de la cadera con la barra sobre la mitad del pie.","Baja la cadera y agarra la barra justo fuera de las piernas.","Con la espalda neutra y el pecho alto, empuja el suelo y sube la barra pegada a las piernas.","Termina de pie con la cadera estirada y baja en el orden inverso."],t:"La barra nunca se aleja de las piernas. Aprende la técnica con poco peso."},
+{n:"Hiperextensiones lumbares",g:"Espalda",m:"Erectores espinales, glúteo, isquiotibiales",e:"Banco de hiperextensiones",s:["Ajusta el banco para que la cadera quede justo por encima del apoyo.","Cruza los brazos sobre el pecho.","Baja el torso flexionando la cadera.","Sube hasta alinear el cuerpo, sin pasarte hacia atrás."],t:"Puedes sujetar un disco para añadir carga."},
+{n:"Encogimientos de hombros",g:"Espalda",m:"Trapecio superior",e:"Mancuernas o barra",s:["De pie con el peso a los lados o delante.","Sube los hombros hacia las orejas.","Mantén un segundo arriba.","Baja despacio."],t:"No hagas círculos con los hombros."},
+{n:"Face pull",g:"Espalda",m:"Deltoides posterior, trapecio medio, manguito rotador",e:"Polea alta con cuerda",s:["Coloca la polea a la altura de la cara y agarra la cuerda con las palmas hacia dentro.","Da un paso atrás con los brazos estirados.","Tira hacia la cara separando las manos y llevando los codos altos.","Vuelve despacio."],t:"Muy bueno para la postura y la salud del hombro."},
+{n:"Remo invertido",g:"Espalda",m:"Dorsal, romboides, bíceps",e:"Barra baja, Smith o TRX",s:["Cuélgate bajo una barra con el cuerpo recto y los talones en el suelo.","Tira hasta acercar el pecho a la barra.","Junta las escápulas arriba.","Baja controlando."],t:"Cuanto más horizontal el cuerpo, más difícil."},
+/* ---------------- HOMBRO ---------------- */
+{n:"Press militar con barra",g:"Hombro",m:"Deltoides anterior y medio, tríceps",e:"Barra",s:["De pie, barra apoyada en la parte alta del pecho y agarre algo más ancho que los hombros.","Aprieta glúteos y abdomen.","Empuja la barra en vertical apartando un poco la cabeza.","Baja controlando hasta la clavícula."],t:"No arquees la zona lumbar para empujar."},
+{n:"Press de hombro con mancuernas",g:"Hombro",m:"Deltoides anterior y medio, tríceps",e:"Mancuernas y banco con respaldo",s:["Siéntate con el respaldo vertical y las mancuernas a la altura de las orejas.","Empuja hacia arriba hasta casi estirar.","Baja hasta que los codos queden a la altura de los hombros.","Repite sin despegar la espalda."],t:"Puedes hacerlo de pie para implicar más el core."},
+{n:"Press Arnold",g:"Hombro",m:"Deltoides anterior, medio y tríceps",e:"Mancuernas",s:["Empieza con las mancuernas delante de la cara y las palmas hacia ti.","Mientras empujas hacia arriba, gira las palmas hacia delante.","Termina con los brazos estirados.","Baja deshaciendo el giro."],t:"Recorre más ángulos del hombro que el press normal."},
+{n:"Press de hombro en máquina",g:"Hombro",m:"Deltoides anterior y medio, tríceps",e:"Máquina",s:["Ajusta el asiento para que las asas queden a la altura de los hombros.","Empuja hacia arriba.","Baja despacio.","Mantén la espalda apoyada."],t:"Opción segura para principiantes."},
+{n:"Elevaciones laterales",g:"Hombro",m:"Deltoides medio",e:"Mancuernas",s:["De pie, mancuernas a los lados y codos ligeramente flexionados.","Eleva los brazos hacia los lados hasta la altura de los hombros.","Piensa en llevar los codos, no las manos.","Baja despacio."],t:"Poco peso y sin balancearte: es un músculo pequeño."},
+{n:"Elevaciones laterales en polea",g:"Hombro",m:"Deltoides medio",e:"Polea baja",s:["Colócate de lado a la polea y agarra el asa con la mano contraria.","Eleva el brazo hacia el lado hasta la altura del hombro.","Mantén un segundo.","Baja controlando."],t:"La polea mantiene la tensión en todo el recorrido."},
+{n:"Elevaciones frontales",g:"Hombro",m:"Deltoides anterior",e:"Mancuernas, disco o polea",s:["De pie con el peso delante de los muslos.","Eleva los brazos al frente hasta la altura de los ojos.","Codos ligeramente flexionados.","Baja despacio."],t:"El deltoides anterior ya trabaja mucho en los press; no abuses."},
+{n:"Pájaros (hombro posterior)",g:"Hombro",m:"Deltoides posterior, romboides",e:"Mancuernas",s:["Inclina el torso casi paralelo al suelo con la espalda recta.","Deja colgar las mancuernas con los codos un poco flexionados.","Abre los brazos hacia los lados juntando escápulas.","Baja despacio."],t:"También puedes hacerlo tumbado boca abajo en un banco inclinado."},
+{n:"Contractora inversa (hombro posterior)",g:"Hombro",m:"Deltoides posterior",e:"Máquina contractora",s:["Siéntate mirando al respaldo de la máquina.","Agarra las asas con los brazos estirados al frente.","Abre los brazos hacia atrás.","Vuelve despacio."],t:"La forma más cómoda de aislar el hombro posterior."},
+{n:"Remo al mentón",g:"Hombro",m:"Deltoides medio, trapecio",e:"Barra, barra Z o polea",s:["De pie, agarra la barra con las manos algo más separadas que los hombros.","Sube la barra pegada al cuerpo llevando los codos hacia arriba y afuera.","Para cuando los codos lleguen a la altura de los hombros.","Baja despacio."],t:"Agarre ancho y sin pasar de los hombros para no pinzar."},
+{n:"Rotación externa con polea",g:"Hombro",m:"Manguito rotador (infraespinoso, redondo menor)",e:"Polea o goma",s:["De lado a la polea, codo pegado al costado a 90°.","Gira el antebrazo hacia fuera sin separar el codo.","Vuelve despacio.","Haz las mismas repeticiones con cada brazo."],t:"Ejercicio de prevención; usa muy poco peso."},
+/* ---------------- BÍCEPS ---------------- */
+{n:"Curl de bíceps con barra",g:"Bíceps",m:"Bíceps braquial, braquial",e:"Barra recta o Z",s:["De pie con la barra agarrada en supinación a la anchura de los hombros.","Codos pegados al cuerpo.","Flexiona los codos subiendo la barra hasta los hombros.","Baja despacio hasta estirar."],t:"La barra Z es más cómoda para las muñecas."},
+{n:"Curl de bíceps con mancuernas",g:"Bíceps",m:"Bíceps braquial",e:"Mancuernas",s:["De pie o sentado con las mancuernas a los lados.","Sube girando la palma hacia arriba.","Aprieta arriba.","Baja despacio, alternando o a la vez."],t:"No balancees el cuerpo."},
+{n:"Curl martillo",g:"Bíceps",m:"Braquiorradial, braquial, bíceps",e:"Mancuernas",s:["Mancuernas a los lados con las palmas enfrentadas.","Sube manteniendo el agarre neutro.","Codos quietos.","Baja controlando."],t:"Engrosa el brazo y fortalece el antebrazo."},
+{n:"Curl predicador (banco Scott)",g:"Bíceps",m:"Bíceps (porción corta), braquial",e:"Banco Scott con barra Z o mancuerna",s:["Apoya los brazos en el cojín del banco.","Sube el peso flexionando los codos.","Baja hasta casi estirar.","No despegues los brazos del cojín."],t:"Evita estirar del todo con mucho peso."},
+{n:"Curl concentrado",g:"Bíceps",m:"Bíceps braquial",e:"Mancuerna",s:["Sentado, apoya el codo en la cara interna del muslo.","Sube la mancuerna hacia el hombro.","Aprieta arriba.","Baja despacio."],t:"Movimiento estricto y muy aislado."},
+{n:"Curl en polea",g:"Bíceps",m:"Bíceps braquial",e:"Polea baja con barra o cuerda",s:["De pie frente a la polea baja.","Codos pegados al cuerpo.","Flexiona los codos hasta los hombros.","Baja manteniendo la tensión."],t:"Tensión constante en todo el recorrido."},
+{n:"Curl inclinado con mancuernas",g:"Bíceps",m:"Bíceps (porción larga)",e:"Mancuernas y banco inclinado",s:["Siéntate en un banco a 45° con los brazos colgando.","Sube las mancuernas sin adelantar los codos.","Aprieta arriba.","Baja hasta estirar."],t:"Estira mucho el bíceps; usa menos peso."},
+{n:"Curl araña",g:"Bíceps",m:"Bíceps (porción corta)",e:"Barra Z o mancuernas y banco inclinado",s:["Túmbate boca abajo en un banco inclinado con los brazos colgando.","Sube el peso flexionando los codos.","Aprieta arriba.","Baja despacio."],t:"Elimina cualquier trampa con el cuerpo."},
+/* ---------------- TRÍCEPS ---------------- */
+{n:"Extensión de tríceps en polea",g:"Tríceps",m:"Tríceps braquial",e:"Polea alta con barra o cuerda",s:["De pie frente a la polea, codos pegados al cuerpo.","Empuja hacia abajo hasta estirar los brazos.","Con cuerda, separa las manos al final.","Sube hasta que los antebrazos queden paralelos al suelo."],t:"Solo se mueven los antebrazos."},
+{n:"Press francés",g:"Tríceps",m:"Tríceps (las tres cabezas)",e:"Barra Z y banco",s:["Túmbate con la barra sobre la frente y los brazos estirados.","Flexiona los codos bajando la barra hacia la frente o por detrás de la cabeza.","Codos apuntando al techo.","Estira los brazos."],t:"Baja despacio y con peso moderado."},
+{n:"Extensión de tríceps por encima de la cabeza",g:"Tríceps",m:"Tríceps (cabeza larga)",e:"Mancuerna o polea",s:["Sujeta una mancuerna con las dos manos por encima de la cabeza.","Baja por detrás de la cabeza flexionando los codos.","Codos cerca de la cabeza.","Estira hacia arriba."],t:"Estira mucho la cabeza larga del tríceps."},
+{n:"Patada de tríceps",g:"Tríceps",m:"Tríceps braquial",e:"Mancuerna o polea",s:["Inclina el torso con la mano libre apoyada en un banco.","Codo pegado al cuerpo a 90°.","Estira el brazo hacia atrás.","Vuelve despacio."],t:"Aprieta un segundo con el brazo estirado."},
+{n:"Fondos de tríceps en banco",g:"Tríceps",m:"Tríceps, deltoides anterior",e:"Banco",s:["Apoya las manos en el borde del banco detrás de ti y los pies delante.","Baja flexionando los codos hacia atrás hasta 90°.","Mantén la espalda cerca del banco.","Empuja hasta estirar."],t:"Con las rodillas flexionadas es más fácil."},
+{n:"Fondos de tríceps en paralelas",g:"Tríceps",m:"Tríceps, pectoral, deltoides anterior",e:"Paralelas o máquina de fondos",s:["Sujétate en las paralelas con el cuerpo vertical.","Baja flexionando los codos pegados al cuerpo.","Para a unos 90°.","Empuja hasta arriba."],t:"El torso vertical carga más el tríceps que el pecho."},
+{n:"Press de banca agarre estrecho",g:"Tríceps",m:"Tríceps, pectoral",e:"Barra y banco",s:["Agarra la barra a la anchura de los hombros.","Baja hasta la parte baja del pecho con los codos pegados.","Empuja hacia arriba.","Mantén las muñecas rectas."],t:"Permite mover mucho peso con el tríceps."},
+{n:"Flexiones diamante",g:"Tríceps",m:"Tríceps, pectoral",e:"Peso corporal",s:["Junta las manos bajo el pecho formando un rombo con pulgares e índices.","Cuerpo recto.","Baja con los codos pegados.","Empuja hasta arriba."],t:"Muy exigentes; empieza con rodillas apoyadas."},
+/* ---------------- ANTEBRAZO ---------------- */
+{n:"Curl de muñeca",g:"Antebrazo",m:"Flexores del antebrazo",e:"Barra o mancuernas",s:["Sentado, apoya los antebrazos en los muslos con las palmas hacia arriba.","Deja caer la barra hacia los dedos.","Flexiona las muñecas hacia arriba.","Baja despacio."],t:"Recorrido corto y repeticiones altas."},
+{n:"Curl de muñeca invertido",g:"Antebrazo",m:"Extensores del antebrazo",e:"Barra o mancuernas",s:["Antebrazos en los muslos con las palmas hacia abajo.","Sube el dorso de la mano.","Baja despacio.","Repite."],t:"Ayuda a prevenir el codo de tenista."},
+{n:"Curl invertido",g:"Antebrazo",m:"Braquiorradial, extensores",e:"Barra Z",s:["Agarra la barra con las palmas hacia abajo.","Sube como en un curl normal.","Codos pegados.","Baja despacio."],t:"Fortalece el agarre para remos y dominadas."},
+{n:"Colgarse de la barra",g:"Antebrazo",m:"Flexores del antebrazo, agarre",e:"Barra fija",s:["Cuélgate de una barra con agarre firme.","Mantén los hombros activos, sin hundirte.","Aguanta el máximo tiempo.","Descansa y repite."],t:"Mejora el agarre y descomprime la espalda."},
+/* ---------------- CUÁDRICEPS ---------------- */
+{n:"Sentadilla con barra",g:"Cuádriceps",m:"Cuádriceps, glúteo, aductores, core",e:"Barra y rack",s:["Barra sobre los trapecios, pies a la anchura de los hombros y puntas un poco hacia fuera.","Toma aire y aprieta el abdomen.","Baja llevando la cadera atrás y abajo, rodillas en la dirección de los pies.","Baja hasta que el muslo quede al menos paralelo y sube empujando el suelo."],t:"Talones en el suelo y espalda neutra en todo momento."},
+{n:"Sentadilla frontal",g:"Cuádriceps",m:"Cuádriceps, core, glúteo",e:"Barra",s:["Apoya la barra en la parte delantera de los hombros con los codos altos.","Baja con el torso muy vertical.","Llega a la profundidad que te permita mantener los codos arriba.","Sube empujando con todo el pie."],t:"Carga más el cuádriceps y menos la zona lumbar."},
+{n:"Sentadilla goblet",g:"Cuádriceps",m:"Cuádriceps, glúteo, core",e:"Mancuerna o kettlebell",s:["Sujeta una mancuerna en vertical pegada al pecho.","Baja con el torso erguido abriendo las rodillas.","Los codos pueden rozar el interior de las rodillas.","Sube empujando el suelo."],t:"Perfecta para aprender a hacer sentadillas."},
+{n:"Sentadilla en Smith",g:"Cuádriceps",m:"Cuádriceps, glúteo",e:"Máquina Smith",s:["Coloca la barra sobre los trapecios y los pies un poco por delante.","Desbloquea la barra.","Baja controlando hasta el paralelo.","Sube y bloquea al terminar."],t:"La guía permite centrarse en la pierna."},
+{n:"Sentadilla hack",g:"Cuádriceps",m:"Cuádriceps, glúteo",e:"Máquina hack",s:["Apoya espalda y hombros en la máquina con los pies en la plataforma.","Desbloquea los seguros.","Baja flexionando rodillas y cadera.","Empuja hasta casi estirar."],t:"Pies más bajos en la plataforma = más cuádriceps."},
+{n:"Prensa de piernas",g:"Cuádriceps",m:"Cuádriceps, glúteo, isquiotibiales",e:"Máquina de prensa",s:["Siéntate con la espalda apoyada y los pies a la anchura de la cadera en la plataforma.","Quita los seguros.","Baja la plataforma flexionando las rodillas hasta unos 90°.","Empuja sin bloquear las rodillas arriba."],t:"No dejes que la zona lumbar se despegue del respaldo."},
+{n:"Extensión de cuádriceps",g:"Cuádriceps",m:"Cuádriceps",e:"Máquina de extensiones",s:["Siéntate con la espalda apoyada y el rodillo sobre los tobillos.","Alinea la rodilla con el eje de la máquina.","Estira las piernas por completo y aprieta un segundo.","Baja despacio."],t:"Ideal como acabado o para calentar la rodilla."},
+{n:"Zancadas",g:"Cuádriceps",m:"Cuádriceps, glúteo, isquiotibiales",e:"Mancuernas o peso corporal",s:["De pie con las mancuernas a los lados.","Da un paso largo al frente.","Baja hasta que la rodilla de atrás casi toque el suelo.","Empuja con la pierna delantera para volver o avanzar."],t:"Paso largo para más glúteo, corto para más cuádriceps."},
+{n:"Sentadilla búlgara",g:"Cuádriceps",m:"Cuádriceps, glúteo",e:"Mancuernas y banco",s:["Apoya el empeine del pie de atrás en un banco.","Coloca el pie delantero un paso largo por delante.","Baja en vertical hasta que el muslo delantero quede paralelo.","Sube empujando con la pierna delantera."],t:"Muy exigente; empieza sin peso."},
+{n:"Subida al cajón",g:"Cuádriceps",m:"Cuádriceps, glúteo",e:"Cajón o banco y mancuernas",s:["Frente a un cajón a la altura de la rodilla.","Apoya un pie entero encima.","Sube empujando con esa pierna sin impulsarte con la de abajo.","Baja controlando y repite."],t:"Cuanto más alto el cajón, más glúteo."},
+{n:"Sentadilla sissy",g:"Cuádriceps",m:"Cuádriceps (recto femoral)",e:"Peso corporal o soporte",s:["Sujétate a algo estable.","Ponte de puntillas e inclina el cuerpo hacia atrás.","Baja llevando las rodillas hacia delante.","Sube manteniendo cadera y tronco alineados."],t:"Avanzado; muy duro para las rodillas si no estás acostumbrado."},
+{n:"Sentadilla isométrica en pared",g:"Cuádriceps",m:"Cuádriceps",e:"Pared",s:["Apoya la espalda en la pared.","Baja hasta que los muslos queden paralelos al suelo.","Rodillas sobre los tobillos.","Aguanta el tiempo marcado."],t:"Mide el tiempo en vez de repeticiones."},
+/* ---------------- FEMORAL ---------------- */
+{n:"Peso muerto rumano",g:"Femoral",m:"Isquiotibiales, glúteo, lumbares",e:"Barra o mancuernas",s:["De pie con la barra delante de los muslos y rodillas un poco flexionadas.","Lleva la cadera hacia atrás bajando la barra pegada a las piernas.","Baja hasta notar el estiramiento detrás de los muslos.","Sube empujando la cadera hacia delante."],t:"La espalda recta manda; no persigas bajar más."},
+{n:"Peso muerto con piernas rígidas",g:"Femoral",m:"Isquiotibiales, lumbares, glúteo",e:"Barra o mancuernas",s:["De pie con las piernas casi rectas.","Baja el peso flexionando la cadera con la espalda neutra.","Para cuando notes el estiramiento.","Sube despacio."],t:"Más estiramiento que el rumano; usa menos peso."},
+{n:"Curl femoral tumbado",g:"Femoral",m:"Isquiotibiales",e:"Máquina de curl tumbado",s:["Túmbate boca abajo con el rodillo detrás de los tobillos.","Rodillas justo por debajo del banco.","Flexiona las piernas llevando los talones al glúteo.","Baja despacio sin despegar la cadera."],t:"Es la «flexión de rodilla» tumbado."},
+{n:"Curl femoral sentado",g:"Femoral",m:"Isquiotibiales",e:"Máquina de curl sentado",s:["Siéntate con el rodillo sobre la parte baja de las pantorrillas y el muslo sujeto.","Flexiona las rodillas llevando los pies hacia abajo y atrás.","Aprieta un segundo.","Vuelve despacio."],t:"Al estar sentado el femoral se estira más."},
+{n:"Curl femoral de pie",g:"Femoral",m:"Isquiotibiales",e:"Máquina o polea con tobillera",s:["De pie, apoya el rodillo detrás del tobillo de una pierna.","Flexiona la rodilla llevando el talón al glúteo.","Mantén la cadera quieta.","Baja despacio y cambia de pierna."],t:"Trabaja cada pierna por separado."},
+{n:"Curl nórdico",g:"Femoral",m:"Isquiotibiales",e:"Peso corporal y algo para sujetar los tobillos",s:["De rodillas con los tobillos sujetos.","Inclínate hacia delante con el cuerpo recto desde las rodillas.","Baja lo más despacio que puedas.","Frena con las manos y vuelve ayudándote."],t:"Muy avanzado y muy eficaz para prevenir lesiones."},
+{n:"Buenos días",g:"Femoral",m:"Isquiotibiales, lumbares, glúteo",e:"Barra",s:["Barra sobre los trapecios y rodillas un poco flexionadas.","Inclina el torso hacia delante llevando la cadera atrás.","Para cuando el torso esté casi paralelo o notes el estiramiento.","Vuelve arriba."],t:"Empieza con muy poco peso."},
+/* ---------------- GLÚTEO ---------------- */
+{n:"Hip thrust",g:"Glúteo",m:"Glúteo mayor, isquiotibiales",e:"Barra y banco",s:["Apoya la parte alta de la espalda en un banco y la barra sobre la cadera (con protector).","Pies a la anchura de la cadera, rodillas a 90° arriba.","Sube la cadera apretando los glúteos hasta alinear tronco y muslos.","Baja controlando sin tocar el suelo."],t:"Mete la barbilla y mira al frente para no arquear la lumbar."},
+{n:"Puente de glúteo",g:"Glúteo",m:"Glúteo mayor",e:"Peso corporal, disco o barra",s:["Túmbate boca arriba con las rodillas flexionadas y los pies en el suelo.","Sube la cadera apretando los glúteos.","Mantén un segundo arriba.","Baja despacio."],t:"Versión sencilla del hip thrust."},
+{n:"Patada de glúteo en polea",g:"Glúteo",m:"Glúteo mayor",e:"Polea baja con tobillera",s:["Ponte la tobillera y sujétate a la máquina.","Con el torso algo inclinado, lleva la pierna hacia atrás.","Aprieta el glúteo sin arquear la espalda.","Vuelve despacio."],t:"El movimiento sale de la cadera, no de la lumbar."},
+{n:"Patada de glúteo en máquina",g:"Glúteo",m:"Glúteo mayor",e:"Máquina de glúteo",s:["Colócate en la máquina con el pie en la plataforma.","Empuja hacia atrás y arriba.","Aprieta el glúteo arriba.","Vuelve controlando."],t:"No bloquees la rodilla."},
+{n:"Abducción de cadera en máquina (glúteo medio)",g:"Glúteo",m:"Glúteo medio y menor",e:"Máquina abductora",s:["Siéntate con las almohadillas por fuera de las rodillas.","Abre las piernas todo lo que puedas.","Aguanta un segundo.","Cierra despacio."],t:"Inclinar el torso hacia delante carga más el glúteo."},
+{n:"Abducción en polea o con goma",g:"Glúteo",m:"Glúteo medio",e:"Polea baja con tobillera o goma",s:["De pie y de lado, con la tobillera en la pierna más alejada de la polea.","Lleva la pierna hacia el lado.","Mantén el tronco recto.","Vuelve despacio."],t:"Trabaja una pierna cada vez."},
+{n:"Monster walk (pasos con goma)",g:"Glúteo",m:"Glúteo medio",e:"Goma elástica",s:["Coloca una goma por encima de las rodillas o en los tobillos.","Semiflexiona las piernas.","Da pasos laterales manteniendo la goma tensa.","Ve y vuelve."],t:"Gran calentamiento antes de pierna."},
+{n:"Peso muerto sumo",g:"Glúteo",m:"Glúteo, aductores, cuádriceps, isquiotibiales",e:"Barra o kettlebell",s:["Pies muy separados con las puntas hacia fuera.","Agarra la barra por dentro de las piernas.","Sube empujando el suelo con la espalda recta.","Baja controlando."],t:"Menos recorrido y menos carga lumbar que el convencional."},
+{n:"Aducción de cadera en máquina",g:"Glúteo",m:"Aductores",e:"Máquina aductora",s:["Siéntate con las almohadillas por dentro de las rodillas.","Cierra las piernas.","Aprieta un segundo.","Abre despacio."],t:"Los aductores también estabilizan la sentadilla."},
+{n:"Kickback en cuadrupedia",g:"Glúteo",m:"Glúteo mayor",e:"Peso corporal o tobillera",s:["A cuatro patas con las manos bajo los hombros.","Eleva una pierna hacia atrás con la rodilla a 90°.","Sube hasta alinear el muslo con el tronco.","Baja y repite."],t:"No gires la cadera."},
+/* ---------------- GEMELO ---------------- */
+{n:"Elevación de gemelos de pie",g:"Gemelo",m:"Gemelos (gastrocnemio)",e:"Máquina, Smith o mancuernas",s:["Apoya la punta de los pies en un escalón.","Baja los talones hasta notar el estiramiento.","Sube de puntillas todo lo que puedas.","Aguanta un segundo arriba."],t:"Recorrido completo y sin rebotes."},
+{n:"Elevación de gemelos sentado",g:"Gemelo",m:"Sóleo",e:"Máquina de gemelo sentado",s:["Siéntate con el soporte sobre los muslos y las puntas en la plataforma.","Baja los talones.","Sube de puntillas.","Aguanta arriba y baja despacio."],t:"Con la rodilla flexionada trabaja sobre todo el sóleo."},
+{n:"Gemelo en prensa",g:"Gemelo",m:"Gemelos",e:"Máquina de prensa",s:["Apoya solo las puntas en la parte baja de la plataforma con las piernas estiradas.","Empuja con las puntas.","Vuelve hasta estirar.","No flexiones las rodillas."],t:"No quites los seguros de la prensa."},
+/* ---------------- ABDOMEN ---------------- */
+{n:"Plancha",g:"Abdomen",m:"Recto y transverso abdominal, oblicuos",e:"Peso corporal",s:["Apoya antebrazos y puntas de los pies.","Cuerpo recto de cabeza a talones.","Aprieta abdomen y glúteos.","Aguanta el tiempo marcado respirando."],t:"Si se hunde la cadera, para."},
+{n:"Plancha lateral",g:"Abdomen",m:"Oblicuos, glúteo medio",e:"Peso corporal",s:["De lado, apóyate en un antebrazo y el borde del pie.","Sube la cadera hasta alinear el cuerpo.","Aguanta sin dejarla caer.","Cambia de lado."],t:"Puedes apoyar la rodilla para facilitarlo."},
+{n:"Crunch abdominal",g:"Abdomen",m:"Recto abdominal",e:"Peso corporal",s:["Túmbate con las rodillas flexionadas.","Manos junto a las sienes sin tirar del cuello.","Despega los hombros del suelo acercando costillas a cadera.","Baja despacio."],t:"El movimiento es corto; no hace falta subir del todo."},
+{n:"Crunch en polea",g:"Abdomen",m:"Recto abdominal",e:"Polea alta con cuerda",s:["De rodillas frente a la polea, sujeta la cuerda junto a la cabeza.","Flexiona el tronco llevando los codos a los muslos.","Aprieta el abdomen.","Vuelve despacio."],t:"La cadera no se mueve; solo se enrolla la columna."},
+{n:"Elevación de piernas colgado",g:"Abdomen",m:"Recto abdominal (inferior), flexores de cadera",e:"Barra fija o paralelas",s:["Cuélgate de la barra.","Sube las piernas (rectas o con rodillas flexionadas) sin balanceo.","Intenta enrollar la pelvis arriba.","Baja despacio."],t:"Con las rodillas flexionadas es más fácil."},
+{n:"Elevación de piernas tumbado",g:"Abdomen",m:"Recto abdominal (inferior)",e:"Peso corporal",s:["Túmbate boca arriba con las manos bajo los glúteos.","Sube las piernas rectas hasta la vertical.","Baja sin tocar el suelo.","Mantén la lumbar pegada al suelo."],t:"Si se despega la lumbar, flexiona las rodillas."},
+{n:"Rueda abdominal",g:"Abdomen",m:"Recto abdominal, core completo",e:"Rueda abdominal",s:["De rodillas, sujeta la rueda bajo los hombros.","Rueda hacia delante estirando el cuerpo.","Llega hasta donde no se hunda la lumbar.","Vuelve tirando con el abdomen."],t:"Avanzado; empieza con recorridos cortos."},
+{n:"Russian twist",g:"Abdomen",m:"Oblicuos",e:"Disco, balón o peso corporal",s:["Sentado con las rodillas flexionadas e inclinado hacia atrás.","Sujeta el peso delante del pecho.","Gira el tronco de un lado a otro.","Mantén la espalda recta."],t:"Levanta los pies para hacerlo más difícil."},
+{n:"Bicicleta abdominal",g:"Abdomen",m:"Oblicuos, recto abdominal",e:"Peso corporal",s:["Túmbate con las manos junto a la cabeza.","Lleva un codo hacia la rodilla contraria mientras estiras la otra pierna.","Alterna los lados.","Movimiento controlado."],t:"No tires del cuello."},
+{n:"Dead bug",g:"Abdomen",m:"Transverso abdominal, core",e:"Peso corporal",s:["Boca arriba con brazos al techo y rodillas a 90°.","Estira a la vez un brazo y la pierna contraria.","Mantén la lumbar pegada al suelo.","Vuelve y cambia de lado."],t:"Excelente para aprender a estabilizar el core."},
+{n:"Pallof press",g:"Abdomen",m:"Oblicuos, transverso (antirrotación)",e:"Polea o goma",s:["De lado a la polea, sujeta el asa contra el pecho.","Empuja los brazos al frente sin dejar que el cuerpo gire.","Aguanta dos segundos.","Vuelve al pecho y cambia de lado."],t:"Trabaja el core resistiendo el giro."},
+{n:"Rodillo de piernas (V-up)",g:"Abdomen",m:"Recto abdominal",e:"Peso corporal",s:["Túmbate con brazos y piernas estirados.","Sube a la vez tronco y piernas formando una V.","Intenta tocar los pies.","Baja despacio."],t:"Muy exigente; flexiona las rodillas si hace falta."},
+{n:"Mountain climbers",g:"Abdomen",m:"Core, flexores de cadera, hombro",e:"Peso corporal",s:["En posición de flexión con los brazos estirados.","Lleva una rodilla al pecho.","Cambia de pierna rápido, como corriendo.","Mantén la cadera baja."],t:"También sirve como cardio intervalado."},
+/* ---------------- LUMBAR ---------------- */
+{n:"Superman",g:"Lumbar",m:"Erectores espinales, glúteo",e:"Peso corporal",s:["Túmbate boca abajo con los brazos estirados al frente.","Eleva a la vez brazos, pecho y piernas.","Aguanta dos segundos.","Baja despacio."],t:"Sin tirones; sube solo lo cómodo."},
+{n:"Bird dog",g:"Lumbar",m:"Erectores, glúteo, core",e:"Peso corporal",s:["A cuatro patas.","Estira a la vez un brazo y la pierna contraria.","Mantén la espalda recta sin girar.","Vuelve y cambia de lado."],t:"Muy bueno para la zona lumbar."},
+{n:"Good morning con goma",g:"Lumbar",m:"Lumbares, isquiotibiales",e:"Goma elástica",s:["Pisa la goma y pásala por detrás del cuello.","Inclínate hacia delante con la espalda recta.","Vuelve a la vertical apretando glúteos.","Repite."],t:"Versión suave para empezar."},
+/* ---------------- CARDIO Y FUNCIONAL ---------------- */
+{n:"Farmer walk (paseo del granjero)",g:"Cardio y funcional",m:"Agarre, trapecio, core, piernas",e:"Mancuernas o kettlebells pesadas",s:["Coge un peso pesado en cada mano.","Ponte recto con hombros atrás y abdomen apretado.","Camina con pasos cortos y firmes.","Recorre la distancia o el tiempo marcado."],t:"No dejes que los hombros caigan hacia delante."},
+{n:"Burpees",g:"Cardio y funcional",m:"Cuerpo completo",e:"Peso corporal",s:["De pie, baja y apoya las manos en el suelo.","Lleva los pies atrás a posición de flexión.","Vuelve a recoger los pies.","Salta con los brazos arriba."],t:"Puedes quitar el salto o la flexión para hacerlo más fácil."},
+{n:"Kettlebell swing",g:"Cardio y funcional",m:"Glúteo, isquiotibiales, core",e:"Kettlebell",s:["Pies algo más anchos que la cadera con la kettlebell delante.","Llévala entre las piernas flexionando la cadera.","Empuja la cadera hacia delante para que suba a la altura del pecho.","Deja que caiga y encadena."],t:"La fuerza sale de la cadera, no de los brazos."},
+{n:"Comba",g:"Cardio y funcional",m:"Gemelos, cardiovascular",e:"Comba",s:["Sujeta la comba con los codos cerca del cuerpo.","Gira con las muñecas.","Salta bajito sobre las puntas.","Mantén un ritmo constante."],t:"Excelente calentamiento."},
+{n:"Battle ropes",g:"Cardio y funcional",m:"Hombros, brazos, core",e:"Cuerdas de batalla",s:["Semisentadilla con una cuerda en cada mano.","Mueve los brazos arriba y abajo creando ondas.","Mantén el core firme.","Trabaja por intervalos."],t:"Prueba ondas alternas, a la vez o golpes."},
+{n:"Saltos al cajón",g:"Cardio y funcional",m:"Cuádriceps, glúteo, potencia",e:"Cajón",s:["De pie frente al cajón.","Baja un poco y lanza los brazos.","Salta y cae suave con todo el pie en el cajón.","Baja caminando."],t:"Baja andando para cuidar las rodillas."},
+{n:"Thruster",g:"Cardio y funcional",m:"Piernas, hombros, core",e:"Barra o mancuernas",s:["Peso a la altura de los hombros.","Haz una sentadilla completa.","Al subir, usa el impulso para empujar el peso por encima de la cabeza.","Baja el peso a los hombros y repite."],t:"Encadena sentadilla y press sin pausa."},
+{n:"Wall ball",g:"Cardio y funcional",m:"Piernas, hombros, cardiovascular",e:"Balón medicinal y pared",s:["Frente a la pared con el balón en el pecho.","Haz una sentadilla.","Al subir, lanza el balón a un punto alto de la pared.","Recógelo y baja directamente a la siguiente sentadilla."],t:"Respira en cada lanzamiento."},
+{n:"Remo TRX",g:"Cardio y funcional",m:"Espalda, bíceps, core",e:"TRX",s:["Sujeta las asas y échate hacia atrás con el cuerpo recto.","Tira llevando el pecho hacia las manos.","Junta escápulas.","Baja despacio."],t:"Acerca los pies al anclaje para hacerlo más difícil."},
+{n:"Sentadilla con salto",g:"Cardio y funcional",m:"Cuádriceps, glúteo, gemelo",e:"Peso corporal",s:["Haz una sentadilla.","Salta explosivo hacia arriba.","Cae suave flexionando las rodillas.","Encadena la siguiente."],t:"Cae siempre con las rodillas en la dirección de los pies."},
+{n:"Jumping jacks",g:"Cardio y funcional",m:"Cuerpo completo, cardiovascular",e:"Peso corporal",s:["De pie con los brazos a los lados.","Salta abriendo piernas y subiendo los brazos.","Salta de nuevo cerrando.","Mantén el ritmo."],t:"Ideal para calentar."},
+{n:"Cinta de correr",g:"Cardio y funcional",m:"Piernas, cardiovascular",e:"Cinta",s:["Empieza caminando unos minutos.","Sube velocidad o inclinación poco a poco.","Mantén la postura erguida sin agarrarte.","Baja el ritmo los últimos minutos."],t:"Caminar con inclinación es un cardio de bajo impacto muy eficaz."},
+{n:"Bicicleta estática",g:"Cardio y funcional",m:"Cuádriceps, cardiovascular",e:"Bicicleta",s:["Ajusta el sillín a la altura de la cadera.","Pedalea a ritmo suave para calentar.","Aumenta la resistencia o haz intervalos.","Termina con unos minutos suaves."],t:"La rodilla debe quedar casi estirada abajo."},
+{n:"Elíptica",g:"Cardio y funcional",m:"Piernas, brazos, cardiovascular",e:"Elíptica",s:["Sube con los pies centrados en los pedales.","Empuja y tira de las asas a la vez.","Ajusta la resistencia.","Mantén el torso erguido."],t:"Sin impacto en las articulaciones."},
+{n:"Remo ergómetro",g:"Cardio y funcional",m:"Piernas, espalda, brazos",e:"Máquina de remo",s:["Empuja primero con las piernas.","Luego inclina el tronco atrás.","Por último tira con los brazos hacia el abdomen.","Vuelve en el orden inverso."],t:"Orden: piernas, tronco, brazos. Y al volver al revés."},
+/* ---------------- CUERPO COMPLETO ---------------- */
+{n:"Clean (cargada)",g:"Cuerpo completo",m:"Piernas, glúteo, espalda, trapecio",e:"Barra",s:["Posición de peso muerto con la barra en el suelo.","Sube la barra explosivamente extendiendo la cadera.","Mete los codos rápido para recibirla sobre los hombros.","Ponte de pie y bájala con control."],t:"Técnico; aprende con un entrenador."},
+{n:"Turkish get-up",g:"Cuerpo completo",m:"Hombro, core, glúteo",e:"Kettlebell",s:["Túmbate con la kettlebell arriba en una mano y el brazo estirado.","Incorpórate apoyando el codo y luego la mano contraria.","Sube la cadera, pasa la pierna por debajo y ponte de rodillas.","Levántate sin dejar de mirar el peso y deshaz los pasos."],t:"Hazlo despacio y con poco peso al principio."},
+{n:"Man maker",g:"Cuerpo completo",m:"Cuerpo completo",e:"Mancuernas",s:["Flexión apoyado en las mancuernas.","Remo con cada brazo.","Salta con los pies hacia las manos y haz una cargada.","Termina con un press por encima de la cabeza."],t:"Un ejercicio muy exigente para circuitos."}
+];
+
+const EX_GROUPS=["Pecho","Espalda","Hombro","Bíceps","Tríceps","Antebrazo","Cuádriceps","Femoral","Glúteo","Gemelo","Abdomen","Lumbar","Cardio y funcional","Cuerpo completo"];
+const EX_META={"Pierna (todo)":["Cuádriceps","Femoral","Glúteo","Gemelo"],"Brazos (todo)":["Bíceps","Tríceps","Antebrazo"],"Core (todo)":["Abdomen","Lumbar"]};
+const norm=t=>String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+const EXQ={q:"",g:"",open:null};
+function inRoutine(name){const n=norm(name);const out=[];for(const d of S.routine.days)for(const x of d.ex){const xn=norm(x.name);if(xn&&(xn===n||xn.startsWith(n+" ")))out.push(d.name)}return [...new Set(out)]}
+function hl(text,q){const t=esc(text);if(!q)return t;const nt=norm(text);const i=nt.indexOf(q);if(i<0)return t;const raw=String(text);return esc(raw.slice(0,i))+"<mark>"+esc(raw.slice(i,i+q.length))+"</mark>"+esc(raw.slice(i+q.length))}
+function vEjercicios(){
+  const q=norm(EXQ.q.trim());
+  const groups=EXQ.g?(EX_META[EXQ.g]||[EXQ.g]):null;
+  const list=EXERCISES.filter(e=>(!groups||groups.includes(e.g))&&(!q||[e.n,e.m,e.g,e.e].some(f=>norm(f).includes(q))));
+  const cnt=g=>EXERCISES.filter(e=>(EX_META[g]||[g]).includes(e.g)).length;
+  let h=`<span class="eyebrow">Biblioteca</span><h2 class="sec" style="margin-bottom:12px">Ejercicios</h2>
+  <div class="exbar"><input class="txt" id="exq" type="search" placeholder="Busca por nombre o músculo: glúteo, remo…" value="${esc(EXQ.q)}" aria-label="Buscar ejercicios" autocomplete="off">
+  <select class="sel" id="exgroup" aria-label="Parte del cuerpo"><option value="">Todas las partes del cuerpo (${EXERCISES.length})</option><optgroup label="Zonas">${Object.keys(EX_META).map(g=>`<option value="${g}" ${EXQ.g===g?"selected":""}>${g} (${cnt(g)})</option>`).join("")}</optgroup><optgroup label="Músculos">${EX_GROUPS.map(g=>`<option value="${g}" ${EXQ.g===g?"selected":""}>${g} (${cnt(g)})</option>`).join("")}</optgroup></select></div>
+  <p class="hint" style="margin:0 0 10px">${list.length} ejercicio${list.length===1?"":"s"}${EXQ.g||q?` · <button class="btn small ghost" data-act="exclear" style="padding:0 4px">Quitar filtros</button>`:""}</p>`;
+  if(!list.length)return h+`<div class="card empty">No hay ejercicios con «${esc(EXQ.q)}»${EXQ.g?" en "+esc(EXQ.g):""}. Prueba con otro nombre o músculo.</div>`;
+  h+=`<div class="exlist">${list.map(e=>{const i=EXERCISES.indexOf(e);const open=EXQ.open===i;const inr=inRoutine(e.n);
+    return `<div class="excard"><button data-act="exopen" data-i="${i}" aria-expanded="${open}"><span style="min-width:0"><b>${hl(e.n,q)}</b><span class="hint">${hl(e.m,q)}</span>${inr.length?`<span class="inr">✓ En tu rutina: ${esc(inr.join(", "))}</span>`:""}</span><span class="gtag">${esc(e.g)}</span></button>
+    ${open?`<div class="exbody"><div class="exmeta"><span>Material: <b>${esc(e.e)}</b></span></div><ol>${e.s.map(x=>`<li>${esc(x)}</li>`).join("")}</ol><div class="tip"><b>Consejo:</b> ${esc(e.t)}</div>
+    ${S.routine.days.length?`<div class="exadd"><select class="sel" id="exday-${i}" aria-label="Día de la rutina">${S.routine.days.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("")}</select><button class="btn primary" data-act="exadd" data-i="${i}">Añadir</button></div>`:""}</div>`:""}</div>`}).join("")}</div>`;
+  return h;
+}
+document.addEventListener("input",e=>{if(e.target.id==="exq"){EXQ.q=e.target.value;EXQ.open=null;const pos=e.target.selectionStart;render();const i=$("#exq");if(i){i.focus();try{i.setSelectionRange(pos,pos)}catch(_){}}}});
+document.addEventListener("change",e=>{if(e.target.id==="exgroup"){EXQ.g=e.target.value;EXQ.open=null;render()}});
+let reloading=false;
+async function reloadData(){
+  if(reloading)return;reloading=true;$("#reload").classList.add("spin");
+  try{
+    await flushWrites();
+    if(SERVER){const {docs}=await api("GET","/api/docs");adopt(docs.map(d=>({id:d.key,data:d.data})));if(ui.tab==="admin")await loadAdmin();toast("Datos actualizados")}
+    else if(store&&store.col){const snap=await store.col.get();adopt(snap.docs.map(d=>({id:d.id,data:d.data()})));toast("Datos actualizados")}
+    else location.reload();
+  }catch(err){toast(err.status===401?"Tu sesión ha caducado":"No se pudo recargar. Revisa la conexión.");if(err.status===401)showAuth()}
+  finally{reloading=false;$("#reload").classList.remove("spin")}
+}
 
 render();
 
@@ -709,7 +915,7 @@ function vPerfiles(){
     if(!db||!user)return;
     const id=await user.id();if(!id)return;
     const col=db.collection("data/users/"+id);
-    store={ref:k=>col.doc(k)};
+    store={ref:k=>col.doc(k),col};
     const snap=await col.get();
     if(snap.empty){await pushAll();setSync(true)}
     else adopt(snap.docs.map(d=>({id:d.id,data:d.data()})));
