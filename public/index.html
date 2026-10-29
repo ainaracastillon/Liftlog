@@ -333,6 +333,7 @@ details summary::-webkit-details-marker{display:none}
 .fnav .btn:disabled{opacity:.4}
 .focus-done{text-align:center}
 .focus-done .kpis{text-align:left}
+.fconfirm{margin-top:10px;border-color:var(--down)}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-x:none}
@@ -1307,7 +1308,8 @@ function vFocus(){
   const cur=F.cur[x.id]||(F.cur[x.id]=focusDefaults(x));
   const L=S.logs[ui.date];const done=validSets(L&&L.dayId===selDay&&L.entries[x.id]?L.entries[x.id].sets:[]);
   const prev=prevFor(x.id,ui.date);const s=suggestion(x,prev);
-  let h=`<div class="focus"><div class="ftop"><button class="btn small ghost" data-act="focusexit" style="padding-left:0">Salir</button><span class="ftime" id="ftime">${mmss((Date.now()-F.start)/1000)}</span><span class="hint">${F.i+1} de ${day.ex.length}</span></div>
+  let h=`<div class="focus"><div class="ftop"><button class="btn small ghost" data-act="focuscancel" style="padding-left:0;color:var(--down)">Cancelar</button><span class="ftime" id="ftime">${mmss((Date.now()-F.start)/1000)}</span><span class="hint">${F.i+1} de ${day.ex.length}</span></div>
+  ${F.confirm?`<div class="card fconfirm" role="alertdialog" aria-label="Cancelar entreno"><b>¿Cancelar el entreno?</b><p class="hint" style="margin:4px 0 10px">${F.added?`Se borrarán las ${F.added} serie${F.added===1?"":"s"} que has apuntado desde que empezaste. Lo que tenías antes se mantiene.`:"Todavía no has apuntado ninguna serie en esta sesión."}</p><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" style="background:var(--down);border-color:var(--down);color:#fff" data-act="focuscancelyes">Sí, cancelar</button><button class="btn primary" data-act="focuscancelno">Seguir entrenando</button></div></div>`:""}
   <div class="fdots">${day.ex.map((e,i)=>{const L2=S.logs[ui.date];const n=validSets(L2&&L2.dayId===selDay&&L2.entries[e.id]?L2.entries[e.id].sets:[]).length;return`<button class="fdot ${i===F.i?"cur":""} ${n>=(+e.sets||1)?"ok":n?"half":""}" data-act="focusgo" data-v="${i}" aria-label="${esc(e.name)}"></button>`}).join("")}</div>
   <div class="ex-h" style="margin-top:14px"><div class="n"><h2 class="sec" style="font-size:30px">${esc(x.name)}</h2><span>Objetivo ${x.sets} × ${esc(x.reps)} reps${x.note?` · <i>${esc(x.note)}</i>`:""}</span></div>
   <button class="eyebtn" data-act="exinfo" data-id="${x.id}" aria-expanded="${!!(ui.info&&ui.info[x.id])}" aria-label="Ver cómo se hace">${ui.info&&ui.info[x.id]?EYE_OFF:EYE}</button></div>
@@ -1422,13 +1424,16 @@ document.addEventListener("click",e=>{
     case"platesclose":ui.plates.open=false;render();return;
     case"noteopen":ui.noteOpen=ui.noteOpen||{};ui.noteOpen[id]=true;render();{const t=document.getElementById("note-"+id);if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}return;
     case"wsumhide":ui.wsumHide=true;try{localStorage.setItem("liftlog-wsum-"+weekStart(TODAY),"1")}catch(e){}render();return;
-    case"focusstart":ensureAudio();ui.focus={i:0,start:Date.now(),cur:{}};ui.plates=null;render();toTop();return;
+    case"focusstart":ensureAudio();ui.focus={i:0,start:Date.now(),cur:{},snap:S.logs[ui.date]?JSON.parse(JSON.stringify(S.logs[ui.date])):null,added:0};ui.plates=null;render();toTop();return;
     case"focusgo":{const v=+b.dataset.v;const day=dayById(selDay);if(v>=0&&v<day.ex.length){ui.focus.i=v;ui.plates=null;render();toTop()}return}
     case"fstep":{const x=dayById(selDay).ex[ui.focus.i];const c=ui.focus.cur[x.id];const d=+b.dataset.v;if(b.dataset.k==="w"){const st=(c.w<10||(d<0&&c.w<=10))?1:2.5;c.w=Math.max(0,roundW(c.w+d*st))}else c.r=Math.max(1,c.r+d);document.getElementById("fw").textContent=fmtKg(c.w);document.getElementById("fr").textContent=c.r;return}
-    case"focusset":{const x=dayById(selDay).ex[ui.focus.i];const c=ui.focus.cur[x.id];const sets=getSets(x.id);for(let i=sets.length-1;i>=0;i--)if(num(sets[i].w)==null||!(num(sets[i].r)>0))sets.splice(i,1);sets.push({w:c.w,r:c.r});persist("log-"+ui.date);checkPR(x.id);
+    case"focusset":{const x=dayById(selDay).ex[ui.focus.i];const c=ui.focus.cur[x.id];const sets=getSets(x.id);for(let i=sets.length-1;i>=0;i--)if(num(sets[i].w)==null||!(num(sets[i].r)>0))sets.splice(i,1);sets.push({w:c.w,r:c.r});ui.focus.added=(ui.focus.added||0)+1;ui.focus.confirm=false;persist("log-"+ui.date);checkPR(x.id);
       const n=validSets(sets).length;if(S.settings.autoRest&&S.settings.rest)startRest(S.settings.rest);
       if(n>=(+x.sets||1)&&ui.focus.i<dayById(selDay).ex.length-1)toast(`${x.name} completado. Pasa al siguiente cuando descanses.`);render();return}
-    case"focusdel":{const x=dayById(selDay).ex[ui.focus.i];const L=S.logs[ui.date];if(L&&L.entries[x.id]){const vs=validSets(L.entries[x.id].sets);const target=vs[+b.dataset.v];L.entries[x.id].sets=L.entries[x.id].sets.filter(s=>s!==target);if(!L.entries[x.id].sets.length)L.entries[x.id].sets=[{w:"",r:""}];cleanup();persist("log-"+ui.date);render()}return}
+    case"focusdel":{const x=dayById(selDay).ex[ui.focus.i];const L=S.logs[ui.date];if(L&&L.entries[x.id]){const vs=validSets(L.entries[x.id].sets);const target=vs[+b.dataset.v];L.entries[x.id].sets=L.entries[x.id].sets.filter(s=>s!==target);if(!L.entries[x.id].sets.length)L.entries[x.id].sets=[{w:"",r:""}];ui.focus.added=Math.max(0,(ui.focus.added||0)-1);cleanup();persist("log-"+ui.date);render()}return}
+    case"focuscancel":ui.focus.confirm=true;render();toTop();return;
+    case"focuscancelno":ui.focus.confirm=false;render();return;
+    case"focuscancelyes":{const F=ui.focus;if(F.snap)S.logs[ui.date]=F.snap;else delete S.logs[ui.date];persist("log-"+ui.date);for(const k of [...celebrated])if(k.includes(ui.date))celebrated.delete(k);REST=null;restUpdate();clearInterval(focusTick);ui.focus=null;ui.plates=null;render();toTop();toast("Entreno cancelado");return}
     case"focusexit":ui.focus=null;clearInterval(focusTick);render();toTop();return;
     case"focusend":{const dur=Math.round((Date.now()-ui.focus.start)/1000);const L=S.logs[ui.date];if(L){L.duration=(L.duration||0)+dur;persist("log-"+ui.date)}ui.focus.done=true;ui.focus.dur=dur;REST=null;restUpdate();clearInterval(focusTick);render();toTop();return}
     case"focusclose":ui.focus=null;render();toTop();return;
