@@ -334,7 +334,7 @@ details summary::-webkit-details-marker{display:none}
 .focus-done{text-align:center}
 .focus-done .kpis{text-align:left}
 .fconfirm{margin-top:10px;border-color:var(--down)}
-.figrow{display:flex;align-items:center;gap:2px;margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 6px 4px}
+.figrow{display:flex;align-items:center;gap:0;margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 6px 4px}
 .excard .figrow{background:var(--surface-2);border-color:transparent}
 .figrow figure{flex:1;min-width:0;margin:0;text-align:center}
 .figrow.one figure{max-width:62%;margin:0 auto}
@@ -912,11 +912,28 @@ function ik(a,b,l1,l2,sg){const dx=b[0]-a[0],dy=b[1]-a[1];let d=Math.hypot(dx,dy
   d=Math.max(d,Math.abs(l1-l2)+.01);const c=Math.min(1,Math.max(-1,(l1*l1+d*d-l2*l2)/(2*l1*d)));const al=Math.acos(c)*sg;
   return[[a[0]+Math.cos(ang+al)*l1,a[1]+Math.sin(ang+al)*l1],b]}
 const P=(x,y)=>x.toFixed(1)+" "+y.toFixed(1);
-function limb(a,b,c,w,col){return `<path d="M${P(...a)}L${P(...b)}L${P(...c)}" fill="none" stroke="#1E4E7A" stroke-width="${w+2.4}" stroke-linecap="round" stroke-linejoin="round"/><path d="M${P(...a)}L${P(...b)}L${P(...c)}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`}
-function seg(a,b,w,col){return `<path d="M${P(...a)}L${P(...b)}" stroke="#1E4E7A" stroke-width="${w+2.4}" stroke-linecap="round"/><path d="M${P(...a)}L${P(...b)}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`}
+let FIGN=0;
+/* silueta con volumen: perfil de anchos a lo largo del segmento a→b, suavizado */
+function shape(a,b,prof,fill,stroke){
+  const dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
+  const ext=prof[0][1]*.55,ext2=prof[prof.length-1][1]*.55;
+  const pts=prof.map(([t,w,wb])=>{const cx=a[0]+dx*t-ux*(t===0?ext:0)+ux*(t===1?ext2:0),cy=a[1]+dy*t-uy*(t===0?ext:0)+uy*(t===1?ext2:0);return[[cx+nx*w,cy+ny*w],[cx-nx*(wb??w),cy-ny*(wb??w)]]});
+  const L1=pts.map(p=>p[0]),R1=pts.map(p=>p[1]).reverse();const ring=L1.concat(R1);
+  let d="";const n=ring.length;for(let i=0;i<n;i++){const p0=ring[i],p1=ring[(i+1)%n];const m=[(p0[0]+p1[0])/2,(p0[1]+p1[1])/2];d+=(i===0?`M${P(...m)}`:`Q${P(...p0)} ${P(...m)}`)}
+  const p0=ring[0],m0=[(ring[n-1][0]+p0[0])/2,(ring[n-1][1]+p0[1])/2];d+=`Q${P(...p0)} ${P(...[(p0[0]+ring[1][0])/2,(p0[1]+ring[1][1])/2])}Z`;
+  return `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width=".9" stroke-linejoin="round"/>`;
+}
+const PROF={
+  ua:[[0,6.2],[.3,6.4],[.62,5.2],[.9,4.3],[1,4.1]],
+  fa:[[0,4.4],[.22,5],[.6,3.9],[.92,2.9],[1,2.8]],
+  th:[[0,8.6],[.3,8.4],[.65,7],[.9,5.6],[1,5.2]],
+  sh:[[0,5.2],[.22,6.3],[.55,4.6],[.86,3.2],[1,3]],
+  tsSide:[[0,10.2],[.32,8.6],[.7,10.8,9.6],[.9,9.4],[1,6.6]],
+  tsFront:[[0,12.5],[.38,11],[.75,15.5],[.93,17],[1,12]]
+};
+function limbS(root,mid,end,pa,pb,fill,stroke,cap){return shape(root,mid,pa,fill,stroke)+shape(mid,end,pb,fill,stroke)+(cap?`<circle cx="${mid[0].toFixed(1)}" cy="${mid[1].toFixed(1)}" r="${cap}" fill="${fill}"/>`:"")}
 const NEAR="#5BB0EE",FAR="#3E86C6";
-function joints(o){
-  const p=o.p;let s=o.s;if(!s){const t=(o.t??-90)*Math.PI/180;s=[p[0]+Math.cos(t)*FG.T,p[1]+Math.sin(t)*FG.T]}
+function joints(o){  const p=o.p;let s=o.s;if(!s){const t=(o.t??-90)*Math.PI/180;s=[p[0]+Math.cos(t)*FG.T,p[1]+Math.sin(t)*FG.T]}
   const td=[(s[0]-p[0])/FG.T,(s[1]-p[1])/FG.T];
   const fr=!!o.front;const sw=fr?12:0,hw=fr?7:0;
   const S1=[s[0]+sw,s[1]],S2=[s[0]-sw,s[1]],H1=[p[0]+hw,p[1]],H2=[p[0]-hw,p[1]];
@@ -928,21 +945,40 @@ function joints(o){
   return{p,s,td,S1,S2,H1,H2,arm1,arm2,leg1,leg2,fr};
 }
 function figure(o){
-  const J=joints(o);let g="";
+  const J=joints(o);const id="fg"+(++FIGN);let g="";
+  g+=`<defs><linearGradient id="${id}n" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9AD3F7"/><stop offset=".5" stop-color="#55A8E8"/><stop offset="1" stop-color="#2E77B8"/></linearGradient><linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6FAEDD"/><stop offset=".55" stop-color="#3B83C2"/><stop offset="1" stop-color="#245F97"/></linearGradient></defs>`;
+  const N=`url(#${id}n)`,F=J.fr?N:`url(#${id}f)`,ST="#1B4B78",STF=J.fr?ST:"#163F66";
   const footDir=o.fd??0,fd2=o.fd2??footDir;
-  const foot=(an,d)=>{const r=d*Math.PI/180;return[an[0]+Math.cos(r)*FG.FT,an[1]+Math.sin(r)*FG.FT]};
-  const far=J.fr?NEAR:FAR;
-  if(!o.hideFar){g+=limb(J.H2,J.leg2[0],J.leg2[1],11,far)+seg(J.leg2[1],foot(J.leg2[1],J.fr?90:fd2),6,far)}
-  if(!o.hideFar&&!J.fr)g+=limb(J.S2,J.arm2[0],J.arm2[1],8,far);
-  // tronco
-  g+=seg(J.p,J.s,20,NEAR);
-  g+=`<circle cx="${J.p[0]}" cy="${J.p[1]}" r="10.5" fill="#20262c"/>`;
-  const hc=[J.s[0]+J.td[0]*15,J.s[1]+J.td[1]*15];
-  g+=`<circle cx="${hc[0].toFixed(1)}" cy="${hc[1].toFixed(1)}" r="9.5" fill="${NEAR}" stroke="#1E4E7A" stroke-width="1.2"/>`;
-  if(!J.fr){const face=o.face??1;const pe=[-J.td[1]*face,J.td[0]*face];g+=`<circle cx="${(hc[0]+pe[0]*5.5).toFixed(1)}" cy="${(hc[1]+pe[1]*5.5).toFixed(1)}" r="1.6" fill="#fff"/>`}
-  g+=limb(J.H1,J.leg1[0],J.leg1[1],11,NEAR)+seg(J.leg1[1],foot(J.leg1[1],J.fr?90:footDir),6,NEAR);
-  if(J.fr)g+=limb(J.S2,J.arm2[0],J.arm2[1],8,NEAR);
-  g+=limb(J.S1,J.arm1[0],J.arm1[1],8,NEAR);
+  const shoe=(an,d,fill)=>{const r=d*Math.PI/180,ux=Math.cos(r),uy=Math.sin(r),nx=-uy,ny=ux;const sg=J.fr?0:1;
+    const hb=[an[0]-ux*3.5,an[1]-uy*3.5],tp=[an[0]+ux*10,an[1]+uy*10];
+    const pts=[[hb[0]+nx*3.2,hb[1]+ny*3.2],[tp[0]+nx*2.4,tp[1]+ny*2.4],[tp[0]+ux*1.6,tp[1]+uy*1.6],[tp[0]-nx*2.2,tp[1]-ny*2.2],[hb[0]-nx*3.4,hb[1]-ny*3.4],[hb[0]-ux*1.6,hb[1]-uy*1.6]];
+    return `<path d="M${pts.map(p=>P(...p)).join("L")}Z" fill="#E9EEF2" stroke="#4A5560" stroke-width=".9" stroke-linejoin="round"/><path d="M${P(...pts[4])}L${P(tp[0]-nx*2.2,tp[1]-ny*2.2)}" stroke="#4A5560" stroke-width="1.6"/>`};
+  const hand=(f,e,fill,st)=>{const d=Math.hypot(e[0]-f[0],e[1]-f[1])||1;const c=[e[0]+(e[0]-f[0])/d*2.6,e[1]+(e[1]-f[1])/d*2.6];return `<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="3.9" ry="3.4" fill="${fill}" stroke="${st}" stroke-width=".9"/>`};
+  const leg=(H,lg,dir,fill,st)=>{const sh2=[H[0]+(lg[0][0]-H[0])*.5,H[1]+(lg[0][1]-H[1])*.5];
+    return limbS(H,lg[0],lg[1],PROF.th,PROF.sh,fill,st,5.4)+shape(H,sh2,[[0,8.9],[.6,8.6],[1,8.2]],"#2A3138","#14181c")+shoe(lg[1],J.fr?90:dir)};
+  const arm=(S,am,fill,st)=>limbS(S,am[0],am[1],PROF.ua,PROF.fa,fill,st,4.3)+hand(am[0],am[1],fill,st);
+  if(!o.hideFar)g+=leg(J.H2,J.leg2,fd2,F,STF);
+  if(!o.hideFar&&!J.fr)g+=arm(J.S2,J.arm2,F,STF);
+  // tronco con camiseta ajustada (mismo tono) y pantalón
+  g+=shape(J.p,J.s,J.fr?PROF.tsFront:PROF.tsSide,N,ST);
+  const waist=[J.p[0]+J.td[0]*FG.T*.18,J.p[1]+J.td[1]*FG.T*.18];
+  g+=shape([J.p[0]-J.td[0]*2,J.p[1]-J.td[1]*2],waist,J.fr?[[0,12.8],[1,11.6]]:[[0,10.4],[1,8.9]],"#2A3138","#14181c");
+  if(!J.fr){const ch=[J.p[0]+J.td[0]*FG.T*.66,J.p[1]+J.td[1]*FG.T*.66];const face=o.face??1;const pe=[-J.td[1]*face,J.td[0]*face];
+    g+=`<path d="M${P(ch[0]+pe[0]*9,ch[1]+pe[1]*9)}q${(-J.td[0]*6).toFixed(1)} ${(-J.td[1]*6).toFixed(1)} ${(pe[0]*-4).toFixed(1)} ${(pe[1]*-4).toFixed(1)}" fill="none" stroke="${ST}" stroke-width=".8" opacity=".6"/>`}
+  // cuello y cabeza
+  const nk=[J.s[0]+J.td[0]*6,J.s[1]+J.td[1]*6];
+  g+=shape(J.s,nk,[[0,4.6],[1,4]],N,ST);
+  const hc=[J.s[0]+J.td[0]*14,J.s[1]+J.td[1]*14];const rot=Math.atan2(J.td[1],J.td[0])*180/Math.PI+90;
+  g+=`<ellipse cx="${hc[0].toFixed(1)}" cy="${hc[1].toFixed(1)}" rx="8" ry="9.6" transform="rotate(${rot.toFixed(1)} ${hc[0].toFixed(1)} ${hc[1].toFixed(1)})" fill="${N}" stroke="${ST}" stroke-width=".9"/>`;
+  if(!J.fr){const face=o.face??1;const pe=[-J.td[1]*face,J.td[0]*face];
+    g+=`<circle cx="${(hc[0]+pe[0]*7.6+J.td[0]*1).toFixed(1)}" cy="${(hc[1]+pe[1]*7.6+J.td[1]*1).toFixed(1)}" r="1.7" fill="${N}" stroke="${ST}" stroke-width=".7"/>`;
+    g+=`<ellipse cx="${(hc[0]+pe[0]*4.4+J.td[0]*2).toFixed(1)}" cy="${(hc[1]+pe[1]*4.4+J.td[1]*2).toFixed(1)}" rx="1.5" ry="1.1" fill="#fff"/>`;
+    g+=`<ellipse cx="${(hc[0]-pe[0]*1.5).toFixed(1)}" cy="${(hc[1]-pe[1]*1.5).toFixed(1)}" rx="2" ry="2.8" fill="${N}" stroke="${ST}" stroke-width=".7" opacity=".9" transform="rotate(${rot.toFixed(1)} ${(hc[0]-pe[0]*1.5).toFixed(1)} ${(hc[1]-pe[1]*1.5).toFixed(1)})"/>`}
+  g+=leg(J.H1,J.leg1,footDir,N,ST);
+  if(J.fr)g+=arm(J.S2,J.arm2,N,ST);
+  g+=`<circle cx="${J.S1[0].toFixed(1)}" cy="${J.S1[1].toFixed(1)}" r="6.6" fill="${N}" stroke="${ST}" stroke-width=".9"/>`;
+  if(J.fr)g+=`<circle cx="${J.S2[0].toFixed(1)}" cy="${J.S2[1].toFixed(1)}" r="6.6" fill="${N}" stroke="${ST}" stroke-width=".9"/>`;
+  g+=arm(J.S1,J.arm1,N,ST);
   return{svg:g,J};
 }
 /* accesorios */
@@ -988,7 +1024,7 @@ const PAT={
   remo_inclinado:{a:{p:[64,84],s:[106,66],h:[104,112],f:[80,FG.G]},b:{p:[64,84],s:[106,66],h:[88,92],f:[80,FG.G],eb:1},ia:[["bar"]],ib:[["bar"]]},
   remo_mancuerna:{pr:[["bench",80,150,98]],a:{p:[64,80],s:[106,72],h:[104,118],f:[62,FG.G],h2:[110,98]},b:{p:[64,80],s:[106,72],h:[88,86],f:[62,FG.G],h2:[110,98],eb:1},ia:[["db"]],ib:[["db"]]},
   remo_invertido:{pr:[["pullbar",60]],a:{p:[70,104],s:[112,94],h:[114,60],f:[22,FG.G],fd:-90,kb:-1},b:{p:[70,90],s:[110,70],h:[114,60],f:[22,FG.G],fd:-90,kb:-1,eb:1}},
-  peso_muerto:{a:{p:[66,92],s:[104,72],h:[100,118],f:[84,FG.G]},b:{p:[80,70],s:[80,26],h:[84,72],f:[84,FG.G]},ia:[["bar"]],ib:[["bar"]]},
+  peso_muerto:{a:{p:[62,84],s:[102,64],h:[100,118],f:[86,FG.G]},b:{p:[80,70],s:[80,26],h:[84,72],f:[84,FG.G]},ia:[["bar"]],ib:[["bar"]]},
   rumano:{a:{p:[80,70],s:[80,26],h:[84,72],f:[84,FG.G]},b:{p:[68,72],s:[108,52],h:[106,100],f:[84,FG.G]},ia:[["bar"]],ib:[["bar"]]},
   buenos_dias:{a:{p:[80,70],s:[80,26],h:[76,26],f:[84,FG.G]},b:{p:[66,72],s:[108,60],h:[104,58],f:[84,FG.G]},ia:[["bar",[74,24]]],ib:[["bar",[106,52]]]},
   hiperext:{pr:[["pad",62,86,92,100]],a:{p:[80,88],s:[110,124],h:[104,106],f:[30,110],kb:1,face:1,fd:90},b:{p:[80,88],s:[122,70],h:[118,76],f:[30,110],kb:1,fd:90}},
@@ -1009,8 +1045,8 @@ const PAT={
   patada_triceps:{pr:[["bench",90,150,98]],a:{p:[62,82],s:[104,74],h:[100,96],f:[60,FG.G],h2:[112,98],eb:1},b:{p:[62,82],s:[104,74],h:[60,80],f:[60,FG.G],h2:[112,98]},ia:[["db"]],ib:[["db"]]},
   muneca:{pr:[["bench",50,100,98]],a:{p:[70,92],s:[66,48],h:[112,98],f:[104,FG.G]},b:{p:[70,92],s:[66,48],h:[110,88],f:[104,FG.G]},ia:[["db"]],ib:[["db"]]},
   colgado:{pr:[["pullbar",8]],a:{p:[80,98],s:[80,54],h:[80,8],f:[80,138],kb:-1},b:{p:[80,98],s:[80,54],h:[80,8],f:[80,138],kb:-1}},
-  sentadilla:{a:{p:[80,70],s:[80,26],h:[74,28],f:[84,FG.G]},b:{p:[60,98],s:[84,62],h:[80,62],f:[84,FG.G]},ia:[["bar",[74,22]]],ib:[["bar",[80,58]]]},
-  goblet:{a:{p:[80,70],s:[80,26],h:[90,46],f:[84,FG.G],eb:1},b:{p:[60,98],s:[80,58],h:[92,74],f:[84,FG.G],eb:1},ia:[["db"]],ib:[["db"]]},
+  sentadilla:{a:{p:[80,70],s:[80,26],h:[74,28],f:[84,FG.G]},b:{p:[58,92],s:[88,58],h:[84,58],f:[86,FG.G]},ia:[["bar",[74,22]]],ib:[["bar",[84,54]]]},
+  goblet:{a:{p:[80,70],s:[80,26],h:[90,46],f:[84,FG.G],eb:1},b:{p:[58,92],s:[84,54],h:[94,70],f:[86,FG.G],eb:1},ia:[["db"]],ib:[["db"]]},
   prensa:{pr:[["pad",16,56,52,104]],a:{p:[52,102],s:[22,68],h:[46,104],f:[82,62],kb:-1,fd:-60},b:{p:[52,102],s:[22,68],h:[46,104],f:[108,46],kb:-1,fd:-60},ia:[["plate",72,46,96,82]],ib:[["plate",100,30,124,66]]},
   extension:{pr:[["bench",56,104,98]],a:{p:[72,92],s:[66,48],h:[80,100],f:[106,FG.G]},b:{p:[72,92],s:[66,48],h:[80,100],f:[134,90],fd:-80}},
   femoral_tumbado:{pr:[["bench",30,118,92]],a:{p:[80,84],s:[38,82],h:[32,104],f:[142,86],kb:1,face:-1,fd:90},b:{p:[80,84],s:[38,82],h:[32,104],f:[104,54],kb:1,face:-1,fd:0},ia:[["roller",146,80]],ib:[["roller",108,50]]},
@@ -1042,14 +1078,14 @@ const PAT={
   swing:{a:{p:[66,86],s:[104,68],h:[86,112],f:[84,FG.G]},b:{p:[80,70],s:[80,26],h:[126,30],f:[84,FG.G]},ia:[["kb"]],ib:[["kb"]]},
   burpee:{a:{p:[60,100],s:[90,66],h:[96,FG.G],f:[80,FG.G]},b:{p:[80,56],s:[80,12],h:[86,-26],f:[82,120],fd:30}},
   salto_cajon:{pr:[["box",100,90,50]],a:{p:[54,100],s:[78,62],h:[44,96],f:[74,FG.G]},b:{p:[118,48],s:[118,4],h:[124,50],f:[122,90]}},
-  thruster:{a:{p:[60,98],s:[84,62],h:[92,58],f:[84,FG.G],eb:1},b:{p:[80,70],s:[80,26],h:[82,-18],f:[84,FG.G]},ia:[["bar"]],ib:[["bar"]]},
-  wall_ball:{pr:[["wall",146]],a:{p:[60,98],s:[84,62],h:[94,58],f:[84,FG.G],eb:1},b:{p:[80,70],s:[80,26],h:[96,-10],f:[84,FG.G]},ia:[["ball"]],ib:[["ball"]]},
+  thruster:{a:{p:[58,92],s:[88,58],h:[96,54],f:[86,FG.G],eb:1},b:{p:[80,70],s:[80,26],h:[82,-18],f:[84,FG.G]},ia:[["bar"]],ib:[["bar"]]},
+  wall_ball:{pr:[["wall",146]],a:{p:[58,92],s:[88,58],h:[98,54],f:[86,FG.G],eb:1},b:{p:[80,70],s:[80,26],h:[96,-10],f:[84,FG.G]},ia:[["ball"]],ib:[["ball"]]},
   comba:{a:{front:true,p:[80,72],s:[80,28],h:[60,72],h2:[100,72],f:[76,FG.G],f2:[84,FG.G]},b:{front:true,p:[80,64],s:[80,20],h:[60,64],h2:[100,64],f:[76,124],f2:[84,124]},ia:[["rope"]],ib:[["rope"]]},
   jacks:{a:{front:true,p:[80,72],s:[80,28],h:[66,72],h2:[94,72],f:[76,FG.G],f2:[84,FG.G]},b:{front:true,p:[80,70],s:[80,26],h:[50,-12],h2:[110,-12],f:[56,FG.G],f2:[104,FG.G]}},
   correr:{pr:[["tread"]],a:{p:[80,68],s:[86,26],h:[100,56],h2:[64,64],f:[102,124],f2:[62,110],kb2:1,eb:1},b:{p:[80,68],s:[86,26],h:[64,64],h2:[100,56],f:[62,110],f2:[102,124],kb:1,eb:1}},
   bici:{pr:[["bike"]],a:{p:[66,88],s:[100,52],h:[112,74],f:[98,100],f2:[102,124]},b:{p:[66,88],s:[100,52],h:[112,74],f:[104,124],f2:[96,100]}},
   remo_ergo:{pr:[["rower"]],a:{p:[70,118],s:[100,80],h:[140,102],f:[128,114],kb:-1},b:{p:[96,118],s:[76,78],h:[104,102],f:[136,118],kb:-1,eb:1}},
-  cargada:{a:{p:[66,92],s:[104,72],h:[100,118],f:[84,FG.G]},b:{p:[80,70],s:[80,26],h:[94,26],f:[84,FG.G],eb:1},ia:[["bar"]],ib:[["bar"]]},
+  cargada:{a:{p:[62,84],s:[102,64],h:[100,118],f:[86,FG.G]},b:{p:[80,70],s:[80,26],h:[94,26],f:[84,FG.G],eb:1},ia:[["bar"]],ib:[["bar"]]},
   turkish:{a:{p:[80,124],s:[36,124],h:[36,78],f:[140,126],kb:-1},b:{p:[80,70],s:[80,26],h:[80,-20],f:[84,FG.G]},ia:[["kb"]],ib:[["kb"]]},
   isometrica_pared:{pr:[["wall",40]],a:{p:[58,98],s:[52,54],h:[70,96],f:[96,FG.G],kb:-1}},
   sissy:{a:{p:[80,70],s:[80,26],h:[96,48],f:[84,FG.G],eb:1},b:{p:[88,94],s:[66,54],h:[84,62],f:[82,FG.G],kb:1,fd:0}}
@@ -1081,12 +1117,17 @@ const EX_FIG={
 "Farmer walk (paseo del granjero)":"farmer","Burpees":"burpee","Kettlebell swing":"swing","Comba":"comba","Battle ropes":"comba","Saltos al cajón":"salto_cajon","Thruster":"thruster","Wall ball":"wall_ball","Sentadilla con salto":"sentadilla","Jumping jacks":"jacks","Cinta de correr":"correr","Bicicleta estática":"bici","Elíptica":"correr","Remo ergómetro":"remo_ergo",
 "Clean (cargada)":"cargada","Turkish get-up":"turkish","Man maker":"burpee"
 };
-function poseSVG(o,props){const f=figure(o);return `<svg viewBox="-6 -30 172 172" class="fig" role="img"><path d="M-6 ${FG.G+1}H166" stroke="var(--eq-m)" stroke-width="1.5" opacity=".4"/>${propsSVG(props,f.J)}${f.svg}</svg>`}
+function figBox(poses,props){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;const add=(x,y,m)=>{x0=Math.min(x0,x-m);y0=Math.min(y0,y-m);x1=Math.max(x1,x+m);y1=Math.max(y1,y+m)};
+  for(const o of poses){if(!o)continue;const J=joints(o);[J.p,J.s,J.S1,J.S2,J.H1,J.H2,...J.arm1,...J.arm2,...J.leg1,...J.leg2].forEach(p=>add(p[0],p[1],12));const hc=[J.s[0]+J.td[0]*14,J.s[1]+J.td[1]*14];add(hc[0],hc[1],12)}
+  for(const pr of props){const n=pr.slice(1).filter(v=>typeof v==="number");for(let i=0;i+1<n.length;i+=2)add(n[i],n[i+1],6)}
+  add(x0+12,FG.G+4,0);const w=x1-x0,h=y1-y0;const W=Math.max(w,h*1.15),H=W/1.15;const cx=(x0+x1)/2,cy=(y0+y1)/2;return [cx-W/2,cy-H/2,W,H]}
+function poseSVG(o,props,box){const f=figure(o);const [vx,vy,vw,vh]=box;return `<svg viewBox="${vx.toFixed(1)} ${vy.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}" class="fig" role="img"><path d="M${(vx).toFixed(1)} ${FG.G+1}H${(vx+vw).toFixed(1)}" stroke="var(--eq-m)" stroke-width="1.5" opacity=".4"/>${propsSVG(props,f.J)}${f.svg}</svg>`}
 function figHTML(name){
   const k=EX_FIG[name];const pt=k&&PAT[k];if(!pt)return"";
   const pa=(pt.pr||[]).concat(pt.ia||[]),pb=(pt.pr||[]).concat(pt.ib||[]);
-  if(!pt.b)return `<div class="figrow one"><figure>${poseSVG(pt.a,pa)}<figcaption>Mantén la posición</figcaption></figure></div>`;
-  return `<div class="figrow"><figure>${poseSVG(pt.a,pa)}<figcaption>Inicio</figcaption></figure><span class="figarr" aria-hidden="true">→</span><figure>${poseSVG(pt.b,pb)}<figcaption>Final</figcaption></figure></div>`;
+  const box=figBox([pt.a,pt.b],pa.concat(pb));
+  if(!pt.b)return `<div class="figrow one"><figure>${poseSVG(pt.a,pa,box)}<figcaption>Mantén la posición</figcaption></figure></div>`;
+  return `<div class="figrow"><figure>${poseSVG(pt.a,pa,box)}<figcaption>Inicio</figcaption></figure><span class="figarr" aria-hidden="true">→</span><figure>${poseSVG(pt.b,pb,box)}<figcaption>Final</figcaption></figure></div>`;
 }
 
 const EX_GROUPS=["Pecho","Espalda","Hombro","Bíceps","Tríceps","Antebrazo","Cuádriceps","Femoral","Glúteo","Gemelo","Abdomen","Lumbar","Cardio y funcional","Cuerpo completo"];
