@@ -114,7 +114,7 @@ async function migrate() {
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "3mb" }));
 
 // Freno sencillo contra fuerza bruta en el login
 const attempts = new Map();
@@ -215,6 +215,7 @@ app.post("/api/password", auth, async (req, res, next) => {
 
 /* --- datos de cada usuario: rutina, registros, etc. --- */
 const KEY_RE = /^[A-Za-z0-9_~-]{1,80}$/;
+const MAX_DOC = 2 * 1024 * 1024;
 app.get("/api/docs", auth, async (req, res, next) => {
   try {
     const { rows } = await q("SELECT key, data FROM docs WHERE user_id = $1", [req.user.id]);
@@ -240,6 +241,68 @@ app.delete("/api/docs/:key", auth, async (req, res, next) => {
   try {
     await q("DELETE FROM docs WHERE user_id = $1 AND key = $2", [req.user.id, req.params.key]);
     res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/* --- recordatorios (.ics) y exportar historial (.csv) --- */
+const ICS_DAY = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+const pad2 = (n) => String(n).padStart(2, "0");
+const icsText = (t) => String(t || "").replace(/\\/g, "\\\\").replace(/[,;]/g, " ").replace(/\n/g, "\\n");
+app.get("/api/reminders.ics", auth, async (req, res, next) => {
+  try {
+    const { rows } = await q("SELECT data FROM docs WHERE user_id = $1 AND key = 'routine'", [req.user.id]);
+    const days = (rows[0] && rows[0].data && rows[0].data.days) || [];
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(req.query.time || "18:00")) || [0, "18", "00"];
+    const hh = Math.min(23, +m[1]), mm = Math.min(59, +m[2]);
+    const now = new Date();
+    const stamp = now.toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+    const ev = [];
+    for (const d of days) {
+      const wd = (d.wd || []).filter((w) => w >= 0 && w <= 6);
+      if (!wd.length) continue;
+      let first = new Date(now);
+      for (let i = 0; i < 7; i++) { const t = new Date(now); t.setDate(now.getDate() + i); if (wd.includes(t.getDay())) { first = t; break; } }
+      const ymd = `${first.getFullYear()}${pad2(first.getMonth() + 1)}${pad2(first.getDate())}`;
+      ev.push([
+        "BEGIN:VEVENT", `UID:liftlog-${d.id}-${req.user.id}@liftlog-gym`, `DTSTAMP:${stamp}`,
+        `DTSTART;TZID=Europe/Madrid:${ymd}T${pad2(hh)}${pad2(mm)}00`, `DTEND;TZID=Europe/Madrid:${ymd}T${pad2((hh + 1) % 24)}${pad2(mm)}00`,
+        `RRULE:FREQ=WEEKLY;BYDAY=${wd.map((w) => ICS_DAY[w]).join(",")}`,
+        `SUMMARY:Gym · ${icsText(d.name)}`,
+        `DESCRIPTION:${icsText((d.ex || []).map((x) => `${x.name} ${x.sets}x${x.reps}`).join("\n"))}`,
+        "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Hoy toca gym", "TRIGGER:-PT30M", "END:VALARM", "END:VEVENT",
+      ].join("\r\n"));
+    }
+    const tz = ["BEGIN:VTIMEZONE", "TZID:Europe/Madrid", "BEGIN:STANDARD", "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU", "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "END:STANDARD", "BEGIN:DAYLIGHT", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "END:DAYLIGHT", "END:VTIMEZONE"].join("\r\n");
+    const body = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Liftlog//ES", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Liftlog", tz, ...ev, "END:VCALENDAR"].join("\r\n");
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    res.setHeader("Content-Disposition", 'inline; filename="liftlog-recordatorios.ics"');
+    res.send(body);
+  } catch (e) {
+    next(e);
+  }
+});
+app.get("/api/export.csv", auth, async (req, res, next) => {
+  try {
+    const { rows } = await q("SELECT key, data FROM docs WHERE user_id = $1 AND key ~ '^log-\\d{4}-\\d{2}-\\d{2}$' ORDER BY key", [req.user.id]);
+    const cell = (v) => { const s = String(v ?? ""); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const kg = (n) => (Math.round(n * 100) / 100).toString().replace(".", ",");
+    const out = [["Fecha", "Rutina", "Ejercicio", "Serie", "Kg", "Repeticiones", "Volumen (kg)"]];
+    for (const r of rows) {
+      const L = r.data || {};
+      for (const e of Object.values(L.entries || {})) {
+        let i = 0;
+        for (const s of (e && e.sets) || []) {
+          const w = parseFloat(String(s.w).replace(",", ".")), rep = parseInt(s.r, 10);
+          if (isNaN(w) || !(rep > 0)) continue;
+          out.push([r.key.slice(4), L.dayName || "", e.name || "", ++i, kg(w), rep, kg(w * rep)]);
+        }
+      }
+    }
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="liftlog-historial-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send("﻿" + out.map((r) => r.map(cell).join(";")).join("\r\n"));
   } catch (e) {
     next(e);
   }
