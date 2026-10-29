@@ -239,31 +239,131 @@ app.delete("/api/docs/:key", auth, async (req, res, next) => {
 });
 
 /* --- panel de administración --- */
-app.get("/api/admin/users", auth, admin, async (req, res, next) => {
+const LOG_RE = /(^|~)log-(\d{4}-\d{2}-\d{2})$/;
+function summarizeLog(data) {
+  let sets = 0, volume = 0, exercises = 0;
+  for (const e of Object.values((data && data.entries) || {})) {
+    let has = false;
+    for (const s of (e && e.sets) || []) {
+      const w = parseFloat(String(s.w).replace(",", ".")), r = parseInt(s.r, 10);
+      if (!isNaN(w) && r > 0) { sets++; volume += w * r; has = true; }
+    }
+    if (has) exercises++;
+  }
+  return { sets, volume, exercises };
+}
+const userRow = (u) => ({
+  id: u.id, username: u.username, email: u.email, name: u.name, isAdmin: u.is_admin,
+  createdAt: u.created_at, lastSeen: u.last_seen,
+});
+const ymd = (d) => d.toISOString().slice(0, 10);
+
+app.get("/api/admin/overview", auth, admin, async (req, res, next) => {
   try {
-    const { rows } = await q(`
-      SELECT u.id, u.username, u.email, u.name, u.is_admin, u.created_at, u.last_seen,
-        COUNT(d.key) FILTER (WHERE d.key LIKE 'log-%' OR d.key LIKE '%~log-%') AS workouts,
-        MAX(d.updated_at) AS last_activity
-      FROM users u LEFT JOIN docs d ON d.user_id = u.id
-      GROUP BY u.id ORDER BY u.created_at`);
+    const [{ rows: users }, { rows: logs }, { rows: sess }] = await Promise.all([
+      q("SELECT * FROM users ORDER BY created_at"),
+      q("SELECT user_id, key, data, updated_at FROM docs WHERE key LIKE '%log-%'"),
+      q("SELECT user_id, COUNT(*)::int AS n FROM sessions WHERE created_at > now() - interval '90 days' GROUP BY user_id"),
+    ]);
+    const byUser = {};
+    for (const u of users) byUser[u.id] = { ...userRow(u), workouts: 0, sets: 0, volume: 0, lastWorkout: null, lastActivity: u.last_seen, sessions: 0 };
+    for (const s of sess) if (byUser[s.user_id]) byUser[s.user_id].sessions = s.n;
+    const today = new Date();
+    const days = {};
+    for (let i = 29; i >= 0; i--) { const d = new Date(today); d.setUTCDate(d.getUTCDate() - i); days[ymd(d)] = 0; }
+    const activity = [];
+    let totalSets = 0, totalVolume = 0, totalWorkouts = 0;
+    for (const r of logs) {
+      const m = LOG_RE.exec(r.key);
+      const U = byUser[r.user_id];
+      if (!m || !U) continue;
+      const date = m[2];
+      const sm = summarizeLog(r.data);
+      if (!sm.sets) continue;
+      totalWorkouts++; totalSets += sm.sets; totalVolume += sm.volume;
+      U.workouts++; U.sets += sm.sets; U.volume += sm.volume;
+      if (!U.lastWorkout || date > U.lastWorkout) U.lastWorkout = date;
+      if (!U.lastActivity || new Date(r.updated_at) > new Date(U.lastActivity)) U.lastActivity = r.updated_at;
+      if (date in days) days[date]++;
+      activity.push({ userId: r.user_id, name: U.name, username: U.username, date, dayName: (r.data && r.data.dayName) || "", exercises: sm.exercises, sets: sm.sets, volume: Math.round(sm.volume), updatedAt: r.updated_at });
+    }
+    activity.sort((x, y) => (y.date + y.updatedAt > x.date + x.updatedAt ? 1 : -1));
+    const now = Date.now();
+    const list = Object.values(byUser);
+    const within = (t, d) => t && now - new Date(t).getTime() < d * 86400000;
     res.json({
-      users: rows.map((r) => ({
-        id: r.id,
-        username: r.username,
-        email: r.email,
-        name: r.name,
-        isAdmin: r.is_admin,
-        createdAt: r.created_at,
-        lastSeen: r.last_seen,
-        workouts: Number(r.workouts),
-        lastActivity: r.last_activity,
-      })),
+      stats: {
+        users: list.length,
+        admins: list.filter((u) => u.isAdmin).length,
+        active7: list.filter((u) => within(u.lastActivity, 7)).length,
+        active30: list.filter((u) => within(u.lastActivity, 30)).length,
+        new7: list.filter((u) => within(u.createdAt, 7)).length,
+        workouts: totalWorkouts,
+        sets: totalSets,
+        volume: Math.round(totalVolume),
+      },
+      daily: Object.entries(days).map(([date, n]) => ({ date, n })),
+      users: list.map((u) => ({ ...u, volume: Math.round(u.volume) })),
+      activity: activity.slice(0, 60),
     });
   } catch (e) {
     next(e);
   }
 });
+
+app.get("/api/admin/users/:id", auth, admin, async (req, res, next) => {
+  try {
+    const { rows } = await q("SELECT * FROM users WHERE id = $1", [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: "Ese usuario ya no existe." });
+    const [{ rows: docs }, { rows: s }] = await Promise.all([
+      q("SELECT key, data, updated_at FROM docs WHERE user_id = $1", [req.params.id]),
+      q("SELECT COUNT(*)::int AS n FROM sessions WHERE user_id = $1 AND created_at > now() - interval '90 days'", [req.params.id]),
+    ]);
+    res.json({ user: { ...userRow(rows[0]), sessions: s[0].n }, docs });
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.post("/api/admin/users", auth, admin, async (req, res, next) => {
+  try {
+    const username = String(req.body.username || "").trim().toLowerCase();
+    const name = String(req.body.name || "").trim().slice(0, 60);
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
+    if (!USER_RE.test(username)) return res.status(400).json({ error: "El usuario debe tener 3 a 30 letras, números, puntos o guiones." });
+    if (!name) return res.status(400).json({ error: "Escribe un nombre." });
+    if (email && !EMAIL_RE.test(email)) return res.status(400).json({ error: "Ese email no parece válido." });
+    if (password.length < 6) return res.status(400).json({ error: "La contraseña necesita al menos 6 caracteres." });
+    const dup = await q("SELECT 1 FROM users WHERE username = $1 OR ($2 <> '' AND email = $2)", [username, email]);
+    if (dup.rows.length) return res.status(409).json({ error: "Ese usuario o email ya está registrado." });
+    const { rows } = await q(
+      "INSERT INTO users (username, email, name, pass_hash, is_admin) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [username, email || null, name, hashPassword(password), !!req.body.isAdmin]
+    );
+    res.json({ user: userRow(rows[0]) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.patch("/api/admin/users/:id", auth, admin, async (req, res, next) => {
+  try {
+    const username = String(req.body.username || "").trim().toLowerCase();
+    const name = String(req.body.name || "").trim().slice(0, 60);
+    const email = String(req.body.email || "").trim().toLowerCase();
+    if (!USER_RE.test(username)) return res.status(400).json({ error: "El usuario debe tener 3 a 30 letras, números, puntos o guiones." });
+    if (!name) return res.status(400).json({ error: "Escribe un nombre." });
+    if (email && !EMAIL_RE.test(email)) return res.status(400).json({ error: "Ese email no parece válido." });
+    const dup = await q("SELECT 1 FROM users WHERE id <> $1 AND (username = $2 OR ($3 <> '' AND email = $3))", [req.params.id, username, email]);
+    if (dup.rows.length) return res.status(409).json({ error: "Ese usuario o email ya lo tiene otra cuenta." });
+    await q("UPDATE users SET username = $2, name = $3, email = $4 WHERE id = $1", [req.params.id, username, name, email || null]);
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
 app.post("/api/admin/users/:id/admin", auth, admin, async (req, res, next) => {
   try {
     if (req.params.id === req.user.id) return res.status(400).json({ error: "No puedes quitarte tu propio permiso." });
@@ -278,7 +378,16 @@ app.post("/api/admin/users/:id/password", auth, admin, async (req, res, next) =>
     const pw = String(req.body.password || "");
     if (pw.length < 6) return res.status(400).json({ error: "La contraseña necesita al menos 6 caracteres." });
     await q("UPDATE users SET pass_hash = $2 WHERE id = $1", [req.params.id, hashPassword(pw)]);
-    await q("DELETE FROM sessions WHERE user_id = $1", [req.params.id]);
+    if (req.params.id !== req.user.id) await q("DELETE FROM sessions WHERE user_id = $1", [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+app.post("/api/admin/users/:id/logout", auth, admin, async (req, res, next) => {
+  try {
+    const token = readCookie(req);
+    await q("DELETE FROM sessions WHERE user_id = $1 AND token <> $2", [req.params.id, token || ""]);
     res.json({ ok: true });
   } catch (e) {
     next(e);

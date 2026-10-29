@@ -143,10 +143,31 @@ select.sel{height:42px;border:1px solid var(--line);background:var(--surface);bo
 .cal button.plan .tag{color:var(--muted)}
 .cal button.plan{border:1px dashed var(--line)}
 .lab{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--muted)}
+.lab .txt{color:var(--fg);font-weight:400;font-size:15px}
 .err{color:var(--down);font-size:13.5px;margin:0}
 .auth{max-width:380px;margin:20px auto 0;display:flex;flex-direction:column;gap:10px}
 .auth .hint{margin:0 0 6px}
 body.locked nav.tabs,body.locked #avatar,body.locked #sync{display:none}
+.pwfield{position:relative;display:block}
+.pwfield .txt{padding-right:46px}
+.eye{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:38px;height:34px;border:0;background:none;color:var(--muted);display:grid;place-items:center;border-radius:8px;padding:0}
+.eye svg{width:20px;height:20px}
+.eye:hover{color:var(--fg)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-2);border-radius:12px;padding:3px;margin-bottom:14px}
+.seg button{border:0;background:none;border-radius:9px;padding:8px 0;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.kpis .stat b{font-size:30px}
+.ulist{padding:4px 14px}
+.urow{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;background:none;border:0;border-top:1px solid var(--line);padding:10px 0;text-align:left}
+.ulist .urow:first-child{border-top:0}
+.uinfo{min-width:0;display:flex;flex-direction:column}
+.uinfo .hint{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unum{text-align:right;display:flex;flex-direction:column}
+.unum b{font-family:var(--display);font-size:22px;line-height:1}
+.adm-top{display:flex;justify-content:space-between;align-items:center}
+.check{display:flex;gap:8px;align-items:center;font-size:14px}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 </style>
@@ -478,10 +499,10 @@ function vAuth(mode,err){
   return `<div class="auth"><svg width="64" height="64" viewBox="0 0 72 72" aria-hidden="true"><rect width="72" height="72" rx="16" fill="#0F6E56"/><rect x="10" y="30" width="52" height="4" rx="2" fill="#E1F5EE"/><rect x="14" y="20" width="7" height="24" rx="2" fill="#5DCAA5"/><rect x="51" y="20" width="7" height="24" rx="2" fill="#5DCAA5"/><rect x="21" y="24" width="4" height="16" rx="1.5" fill="#9FE1CB"/><rect x="47" y="24" width="4" height="16" rx="1.5" fill="#9FE1CB"/><rect x="18" y="52" width="36" height="3" rx="1.5" fill="#9FE1CB"/><rect x="18" y="58" width="22" height="3" rx="1.5" fill="#5DCAA5"/></svg>
   <h2 class="sec">${mode==="login"?"Entra en Liftlog":"Crea tu cuenta"}</h2><p class="hint">${mode==="login"?"Tu rutina y tus marcas te esperan.":"Cada persona tiene su propia rutina, calendario y progreso."}</p>
   <form id="authform" class="stack" novalidate>
-  ${mode==="register"?`<label class="lab">Nombre<input class="txt" id="a-name" autocomplete="name" placeholder="Ainara"></label>`:""}
+  ${mode==="register"?`<label class="lab">Nombre<input class="txt" id="a-name" autocomplete="name" placeholder="Tu nombre"></label>`:""}
   ${mode==="register"?`<label class="lab">Email<input class="txt" id="a-email" type="email" autocomplete="email" autocapitalize="none" placeholder="tu@email.com"></label>`:""}
-  <label class="lab">${mode==="login"?"Usuario o email":"Usuario"}<input class="txt" id="a-user" autocomplete="username" autocapitalize="none" placeholder="ainara"></label>
-  <label class="lab">Contraseña<input class="txt" id="a-pass" type="password" autocomplete="${mode==="login"?"current-password":"new-password"}" placeholder="Mínimo 6 caracteres"></label>
+  <label class="lab">${mode==="login"?"Usuario o email":"Usuario"}<input class="txt" id="a-user" autocomplete="username" autocapitalize="none" placeholder="${mode==="login"?"usuario o correo@ejemplo.com":"nombre.usuario"}"></label>
+  <label class="lab">Contraseña${pwField("a-pass",mode==="login"?"current-password":"new-password",mode==="login"?"":"Mínimo 6 caracteres")}</label>
   ${err?`<p class="err" role="alert">${esc(err)}</p>`:""}
   <button class="btn primary" type="submit">${mode==="login"?"Entrar":"Crear cuenta"}</button>
   <button class="btn ghost" type="button" data-auth="${mode==="login"?"register":"login"}">${mode==="login"?"¿No tienes cuenta? Créala":"Ya tengo cuenta"}</button></form></div>`;
@@ -505,41 +526,145 @@ async function startServer(user,fresh){
 }
 async function logout(){try{await api("POST","/api/logout")}catch(e){}SERVER=null;store=null;try{localStorage.removeItem(LS_KEY2)}catch(e){}authMode="login";showAuth()}
 
-let ADM=null;
-async function loadAdmin(){try{const r=await api("GET","/api/admin/users");ADM={users:r.users,err:null}}catch(e){ADM={users:[],err:e.message}}if(ui.tab==="admin")render()}
-const ago=t=>{if(!t)return"nunca";const d=Math.round((Date.now()-new Date(t))/86400000);return d<=0?"hoy":d===1?"ayer":"hace "+d+" días"};
+/* ---------- contraseñas con ojo ---------- */
+const EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.5 6.6C3.8 8.3 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.4-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+const pwField=(id,ac,ph="")=>`<span class="pwfield"><input class="txt" id="${id}" type="password" autocomplete="${ac}" placeholder="${ph}" autocapitalize="none" spellcheck="false"><button type="button" class="eye" data-eye="${id}" aria-label="Mostrar contraseña" aria-pressed="false">${EYE}</button></span>`;
+document.addEventListener("click",e=>{const b=e.target.closest("[data-eye]");if(!b)return;e.preventDefault();const i=document.getElementById(b.dataset.eye);if(!i)return;const show=i.type==="password";i.type=show?"text":"password";b.innerHTML=show?EYE_OFF:EYE;b.setAttribute("aria-pressed",show);b.setAttribute("aria-label",show?"Ocultar contraseña":"Mostrar contraseña");i.focus()});
+
+/* ---------- panel de administración ---------- */
+let ADM=null,DET=null;
+const A={view:"resumen",q:"",filter:"todos",sort:"recientes",userId:null,creating:false,confirm:null,err:null};
+async function loadAdmin(){try{ADM=await api("GET","/api/admin/overview");ADM.err=null}catch(e){ADM={err:e.message}}if(ui.tab==="admin")render()}
+async function loadDetail(id){DET=null;render();try{DET=await api("GET","/api/admin/users/"+id)}catch(e){DET={err:e.message}}if(ui.tab==="admin"&&A.view==="user")render()}
+const ago=t=>{if(!t)return"nunca";const d=Math.floor((Date.now()-new Date(t))/86400000);return d<=0?"hoy":d===1?"ayer":d<30?"hace "+d+" días":d<365?"hace "+Math.round(d/30)+" meses":"hace más de un año"};
+const fmtN=n=>Math.round(n||0).toLocaleString("es-ES");
+const tons=v=>v>=1000?fmtKg(Math.round(v/100)/10)+" t":fmtN(v)+" kg";
+const dayOf=t=>String(t||"").slice(0,10);
+function admUsers(){
+  const q=A.q.trim().toLowerCase();const now=Date.now();
+  let L=ADM.users.filter(u=>!q||[u.name,u.username,u.email].some(x=>String(x||"").toLowerCase().includes(q)));
+  const act=u=>u.lastActivity&&now-new Date(u.lastActivity)<30*86400000;
+  if(A.filter==="admins")L=L.filter(u=>u.isAdmin);else if(A.filter==="activos")L=L.filter(act);else if(A.filter==="inactivos")L=L.filter(u=>!act(u));
+  const by={recientes:(a,b)=>new Date(b.createdAt)-new Date(a.createdAt),actividad:(a,b)=>new Date(b.lastActivity||0)-new Date(a.lastActivity||0),nombre:(a,b)=>a.name.localeCompare(b.name,"es"),entrenos:(a,b)=>b.workouts-a.workouts};
+  return L.sort(by[A.sort]);
+}
+function barChart(daily){
+  const W=340,H=130,L=24,B=20,T=8,R=4;const max=Math.max(2,...daily.map(d=>d.n));const step=max<=4?1:Math.ceil(max/4);const top=Math.ceil(max/step)*step;
+  const bw=(W-L-R)/daily.length;const y=v=>T+(H-T-B)*(1-v/top);
+  let g="";for(let v=0;v<=top;v+=step)g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-5}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="Figtree,sans-serif">${v}</text>`;
+  const bars=daily.map((d,i)=>d.n?`<rect x="${(L+i*bw+1.5).toFixed(1)}" y="${y(d.n).toFixed(1)}" width="${Math.max(2,bw-3).toFixed(1)}" height="${(H-B-y(d.n)).toFixed(1)}" rx="2" fill="var(--accent)"><title>${shortDate(d.date)}: ${d.n} entreno${d.n===1?"":"s"}</title></rect>`:"").join("");
+  const lab=[0,Math.floor(daily.length/2),daily.length-1].map(i=>`<text x="${(L+i*bw+bw/2).toFixed(1)}" y="${H-5}" text-anchor="${i===0?"start":i===daily.length-1?"end":"middle"}" font-size="10" fill="var(--muted)" font-family="Figtree,sans-serif">${shortDate(daily[i].date)}</text>`).join("");
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Entrenos por día en los últimos 30 días">${g}${bars}${lab}</svg>`;
+}
+const userLine=u=>`<button class="urow" data-act="admopen" data-id="${u.id}"><span class="avatar" style="background:${u.isAdmin?COLORS[0]:COLORS[3]}">${initials(u.name)}</span><span class="uinfo"><b>${esc(u.name)}</b>${u.isAdmin?` <span class="badge pr">Admin</span>`:""}<span class="hint">@${esc(u.username)} · ${ago(u.lastActivity)}</span></span><span class="unum"><b>${u.workouts}</b><span class="hint">entrenos</span></span></button>`;
 function vAdmin(){
-  let h=`<button class="btn small ghost" data-act="profiles" style="padding-left:0">← Tu cuenta</button><span class="eyebrow" style="display:block;margin-top:6px">Superadmin</span><h2 class="sec" style="margin-bottom:12px">Panel de administración</h2>`;
-  if(!ADM)return h+`<div class="card empty">Cargando usuarios…</div>`;
+  let h=`<div class="adm-top"><button class="btn small ghost" data-act="profiles" style="padding-left:0">← Tu cuenta</button><button class="btn small ghost" data-act="admreload" aria-label="Actualizar datos">Actualizar</button></div><span class="eyebrow">Superadmin</span><h2 class="sec" style="margin-bottom:12px">Panel de administración</h2>`;
+  if(A.view!=="user")h+=`<div class="seg" role="tablist">${[["resumen","Resumen"],["usuarios","Usuarios"],["actividad","Actividad"]].map(([k,l])=>`<button role="tab" aria-selected="${A.view===k}" data-act="admview" data-v="${k}">${l}</button>`).join("")}</div>`;
+  if(!ADM)return h+`<div class="card empty">Cargando datos…</div>`;
   if(ADM.err)return h+`<div class="card"><p class="err">${esc(ADM.err)}</p><button class="btn small" data-act="admreload">Reintentar</button></div>`;
-  const U=ADM.users;const act7=U.filter(u=>u.lastActivity&&Date.now()-new Date(u.lastActivity)<7*86400000).length;const tot=U.reduce((a,u)=>a+u.workouts,0);
-  h+=`<div class="stats"><div class="stat"><b>${U.length}</b><span>usuarios</span></div><div class="stat"><b>${act7}</b><span>activos 7 días</span></div><div class="stat"><b>${tot}</b><span>entrenos</span></div></div>`;
-  h+=`<div class="stack">${U.map(u=>{const me=u.id===SERVER.user.id;const c=ui.admConfirm&&ui.admConfirm.id===u.id?ui.admConfirm.kind:null;return`<div class="card">
-    <div class="row"><span class="avatar big" style="background:${u.isAdmin?COLORS[0]:COLORS[3]}">${initials(u.name)}</span><div style="flex:1;min-width:0"><b>${esc(u.name)}</b> ${u.isAdmin?`<span class="badge pr">Admin</span>`:""} ${me?`<span class="badge same">Tú</span>`:""}<br><span class="hint" style="overflow-wrap:anywhere">@${esc(u.username)}${u.email?" · "+esc(u.email):""}</span></div></div>
-    <div class="hint" style="margin-top:8px">${u.workouts} entreno${u.workouts===1?"":"s"} · última actividad ${ago(u.lastActivity||u.lastSeen)} · alta ${shortDate(String(u.createdAt).slice(0,10))}</div>
-    ${me?"":`<div class="row" style="margin-top:10px;flex-wrap:wrap"><button class="btn small" data-act="admtoggle" data-id="${u.id}">${u.isAdmin?"Quitar admin":"Hacer admin"}</button><button class="btn small" data-act="admpwask" data-id="${u.id}">Nueva contraseña</button><button class="btn small ghost" style="margin-left:auto;color:var(--down)" data-act="admdelask" data-id="${u.id}">Eliminar</button></div>`}
-    ${c==="pw"?`<div class="row" style="margin-top:8px"><input class="txt" id="admpw-${u.id}" type="text" placeholder="Nueva contraseña" autocomplete="off"><button class="btn small primary" data-act="admpw" data-id="${u.id}">Guardar</button><button class="btn small ghost" data-act="admcancel">Cancelar</button></div>`:""}
-    ${c==="del"?`<div class="confirm">Se borrará la cuenta de ${esc(u.name)} con toda su rutina e historial. <button class="btn small" data-act="admdel" data-id="${u.id}" style="color:var(--down)">Eliminar</button><button class="btn small ghost" data-act="admcancel">Cancelar</button></div>`:""}
-    </div>`}).join("")}</div>`;
+  const S2=ADM.stats;
+  if(A.view==="resumen"){
+    h+=`<div class="kpis"><div class="stat"><b>${S2.users}</b><span>usuarios · ${S2.new7} nuevos esta semana</span></div><div class="stat"><b>${S2.active7}</b><span>activos 7 días · ${S2.active30} en 30</span></div><div class="stat"><b>${fmtN(S2.workouts)}</b><span>entrenos apuntados</span></div><div class="stat"><b>${tons(S2.volume)}</b><span>levantados · ${fmtN(S2.sets)} series</span></div></div>`;
+    h+=`<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:6px"><b>Entrenos por día</b><span class="hint">últimos 30 días</span></div>${barChart(ADM.daily)}</div>`;
+    const top=ADM.users.filter(u=>u.workouts).sort((a,b)=>b.workouts-a.workouts).slice(0,5);
+    h+=`<div class="eyebrow" style="margin:16px 0 8px">Quién más entrena</div><div class="card ulist">${top.length?top.map(userLine).join(""):`<p class="hint" style="margin:0">Todavía nadie ha apuntado entrenos.</p>`}</div>`;
+    const recent=ADM.users.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+    h+=`<div class="eyebrow" style="margin:16px 0 8px">Últimas altas</div><div class="card ulist">${recent.map(userLine).join("")}</div>`;
+    return h;
+  }
+  if(A.view==="actividad"){
+    h+=ADM.activity.length?`<div class="card hist">${ADM.activity.map(a=>`<button class="h" data-act="admopen" data-id="${a.userId}" style="background:none;border:0;border-top:1px solid var(--line);text-align:left;width:100%;grid-template-columns:62px minmax(0,1fr) auto"><span class="dt">${shortDate(a.date)}</span><span style="min-width:0"><b style="font-weight:600">${esc(a.name)}</b> <span class="hint">· ${esc(a.dayName||"Entreno")}</span><br><span class="hint">${a.exercises} ejercicios · ${a.sets} series</span></span><span class="hint">${tons(a.volume)}</span></button>`).join("")}</div>`:`<div class="card empty">Aún no hay entrenos apuntados.</div>`;
+    return h;
+  }
+  if(A.view==="usuarios"){
+    const L=admUsers();
+    h+=`<div class="row" style="gap:8px;margin-bottom:10px"><input class="txt" id="admq" type="search" placeholder="Buscar por nombre, usuario o email" value="${esc(A.q)}" aria-label="Buscar usuarios"></div>
+    <div class="chips" role="group" aria-label="Filtrar" style="margin-bottom:10px">${[["todos","Todos"],["activos","Activos"],["inactivos","Inactivos"],["admins","Admins"]].map(([k,l])=>`<button class="chip" aria-pressed="${A.filter===k}" data-act="admfilter" data-v="${k}">${l}</button>`).join("")}</div>
+    <div class="row" style="gap:8px;margin-bottom:12px"><select class="sel" id="admsort" aria-label="Ordenar" style="flex:1">${[["recientes","Altas más recientes"],["actividad","Última actividad"],["nombre","Nombre"],["entrenos","Más entrenos"]].map(([k,l])=>`<option value="${k}" ${A.sort===k?"selected":""}>${l}</option>`).join("")}</select><button class="btn" data-act="admcsv">Exportar CSV</button></div>`;
+    h+=A.creating?`<form class="card stack" id="admnew" novalidate style="margin-bottom:12px"><b>Nuevo usuario</b>
+      <label class="lab">Nombre<input class="txt" id="n-name" placeholder="Nombre y apellido" autocomplete="off"></label>
+      <label class="lab">Usuario<input class="txt" id="n-user" placeholder="nombre.usuario" autocapitalize="none" autocomplete="off"></label>
+      <label class="lab">Email<input class="txt" id="n-email" type="email" placeholder="correo@ejemplo.com" autocapitalize="none" autocomplete="off"></label>
+      <label class="lab">Contraseña${pwField("n-pass","new-password","Mínimo 6 caracteres")}</label>
+      <label class="check"><input type="checkbox" id="n-admin"> Darle permisos de administrador</label>
+      ${A.err?`<p class="err" role="alert">${esc(A.err)}</p>`:""}
+      <div class="row"><button class="btn primary" type="submit">Crear usuario</button><button class="btn ghost" type="button" data-act="admnewcancel">Cancelar</button></div></form>`
+      :`<button class="btn primary" data-act="admnewopen" style="width:100%;margin-bottom:12px">+ Crear usuario</button>`;
+    h+=`<p class="hint" style="margin:0 0 8px">${L.length} de ${ADM.users.length} usuarios</p>`;
+    h+=L.length?`<div class="card ulist">${L.map(userLine).join("")}</div>`:`<div class="card empty">Ningún usuario coincide con la búsqueda.</div>`;
+    return h;
+  }
+  /* ficha de usuario */
+  h=`<div class="adm-top"><button class="btn small ghost" data-act="admback" style="padding-left:0">← Usuarios</button></div>`;
+  if(!DET)return h+`<div class="card empty">Cargando usuario…</div>`;
+  if(DET.err)return h+`<div class="card"><p class="err">${esc(DET.err)}</p></div>`;
+  const U=DET.user;const me=U.id===SERVER.user.id;const sum=ADM.users.find(x=>x.id===U.id)||{workouts:0,sets:0,volume:0};
+  const D=fromDocs(DET.docs.map(d=>({id:d.key,data:d.data})));
+  h+=`<div class="row" style="gap:12px;margin-bottom:12px"><span class="avatar big" style="background:${U.isAdmin?COLORS[0]:COLORS[3]}">${initials(U.name)}</span><div style="min-width:0"><h2 class="sec" style="font-size:26px">${esc(U.name)}</h2><span class="hint">@${esc(U.username)}${U.isAdmin?" · Administrador":""}${me?" · Tú":""}</span></div></div>`;
+  h+=`<div class="kpis"><div class="stat"><b>${sum.workouts}</b><span>entrenos</span></div><div class="stat"><b>${fmtN(sum.sets)}</b><span>series</span></div><div class="stat"><b>${tons(sum.volume)}</b><span>levantados</span></div><div class="stat"><b>${U.sessions}</b><span>sesiones abiertas</span></div></div>`;
+  h+=`<div class="card stack"><div class="hint">Alta el ${longDate(dayOf(U.createdAt))} · última vez ${ago(U.lastSeen)}${sum.lastWorkout?" · último entreno "+shortDate(sum.lastWorkout):""}</div>
+    <form class="stack" id="admedit" novalidate>
+    <label class="lab">Nombre<input class="txt" id="e-name" value="${esc(U.name)}" autocomplete="off"></label>
+    <label class="lab">Usuario<input class="txt" id="e-user" value="${esc(U.username)}" autocapitalize="none" autocomplete="off"></label>
+    <label class="lab">Email<input class="txt" id="e-email" type="email" value="${esc(U.email||"")}" placeholder="Sin email" autocapitalize="none" autocomplete="off"></label>
+    ${A.msg&&A.msg.k==="edit"?`<p class="${A.msg.c}" role="status">${esc(A.msg.t)}</p>`:""}
+    <button class="btn" type="submit">Guardar cambios</button></form></div>`;
+  h+=`<div class="card stack" style="margin-top:12px"><b>Acciones</b>
+    ${me?`<p class="hint" style="margin:0">Es tu propia cuenta: tu contraseña se cambia desde «Tu cuenta».</p>`:`
+    <form class="stack" id="admpw" novalidate><label class="lab">Nueva contraseña${pwField("e-pass","new-password","Mínimo 6 caracteres")}</label>${A.msg&&A.msg.k==="pw"?`<p class="${A.msg.c}" role="status">${esc(A.msg.t)}</p>`:""}<button class="btn" type="submit">Cambiar contraseña</button></form>
+    <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn small" data-act="admtoggle" data-id="${U.id}">${U.isAdmin?"Quitar permisos de admin":"Hacer administrador"}</button><button class="btn small" data-act="admkick" data-id="${U.id}">Cerrar sus sesiones</button></div>
+    ${A.confirm==="del"?`<div class="confirm">Se borrará la cuenta de ${esc(U.name)} con toda su rutina e historial. No se puede deshacer. <button class="btn small" data-act="admdel" data-id="${U.id}" style="color:var(--down)">Eliminar cuenta</button><button class="btn small ghost" data-act="admcancel">Cancelar</button></div>`:`<button class="btn small ghost" style="color:var(--down);align-self:flex-start;padding-left:0" data-act="admdelask">Eliminar cuenta</button>`}`}
+  </div>`;
+  for(const p of D.profiles){const P=D.data[p.id];if(!P)continue;
+    if(D.profiles.length>1)h+=`<div class="eyebrow" style="margin:18px 0 0">Perfil · ${esc(p.name)}</div>`;
+    h+=`<div class="eyebrow" style="margin:16px 0 8px">Rutina</div>`;
+    h+=P.routine.days.length?`<div class="stack">${P.routine.days.map(d=>`<div class="card"><div class="row" style="justify-content:space-between"><b>${esc(d.name)}</b><span class="hint">${(d.wd||[]).length?(d.wd||[]).slice().sort((a,b)=>((a+6)%7)-((b+6)%7)).map(w=>DIA[w].slice(0,3)).join(", "):"Sin día fijo"}</span></div>${d.ex.length?`<div class="hint" style="margin-top:6px">${d.ex.map(x=>`${esc(x.name||"Ejercicio")} ${x.sets}×${esc(x.reps)}`).join(" · ")}</div>`:""}</div>`).join("")}</div>`:`<div class="card empty">Sin rutina.</div>`;
+    const ds=Object.keys(P.logs).sort().reverse().slice(0,8);
+    h+=`<div class="eyebrow" style="margin:16px 0 8px">Últimos entrenos</div>`;
+    h+=ds.length?`<div class="card hist">${ds.map(d=>{const L=P.logs[d];return`<div class="h" style="grid-template-columns:62px minmax(0,1fr)"><span class="dt">${shortDate(d)}</span><span><b style="font-weight:600">${esc(L.dayName||"Entreno")}</b>${Object.values(L.entries||{}).map(e=>`<span class="hint" style="display:block">${esc(e.name)}: ${setsText(e.sets)||"—"}</span>`).join("")}</span></div>`}).join("")}</div>`:`<div class="card empty">Sin entrenos apuntados.</div>`;
+  }
   return h;
 }
+function csvDownload(){
+  const cols=[["Nombre","name"],["Usuario","username"],["Email","email"],["Admin",u=>u.isAdmin?"sí":"no"],["Alta",u=>dayOf(u.createdAt)],["Última actividad",u=>dayOf(u.lastActivity)],["Entrenos","workouts"],["Series","sets"],["Kg levantados","volume"]];
+  const cell=v=>{const s=String(v??"");return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+  const rows=[cols.map(c=>c[0]).join(";")].concat(admUsers().map(u=>cols.map(([,k])=>cell(typeof k==="function"?k(u):u[k])).join(";")));
+  const blob=new Blob(["﻿"+rows.join("\n")],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="liftlog-usuarios-"+TODAY+".csv";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+}
+document.addEventListener("input",e=>{if(e.target.id==="admq"){A.q=e.target.value;const pos=e.target.selectionStart;render();const i=$("#admq");if(i){i.focus();i.setSelectionRange(pos,pos)}}});
+document.addEventListener("change",e=>{if(e.target.id==="admsort"){A.sort=e.target.value;render()}});
 document.addEventListener("submit",async e=>{
-  if(e.target.id!=="pwform")return;e.preventDefault();
-  const cur=$("#pw-cur").value,nw=$("#pw-new").value;
-  if(!cur||!nw){ui.pwMsg=["err","Rellena las dos contraseñas."];return render()}
-  try{await api("POST","/api/password",{current:cur,next:nw});ui.pwMsg=["hint","Contraseña cambiada."]}catch(err){ui.pwMsg=["err",err.message]}render();
+  const f=e.target;
+  if(f.id==="pwform"){e.preventDefault();
+    const cur=$("#pw-cur").value,nw=$("#pw-new").value;
+    if(!cur||!nw){ui.pwMsg=["err","Rellena las dos contraseñas."];return render()}
+    try{await api("POST","/api/password",{current:cur,next:nw});ui.pwMsg=["hint","Contraseña cambiada."]}catch(err){ui.pwMsg=["err",err.message]}render();return}
+  if(f.id==="admnew"){e.preventDefault();
+    const body={name:$("#n-name").value,username:$("#n-user").value,email:$("#n-email").value,password:$("#n-pass").value,isAdmin:$("#n-admin").checked};
+    try{await api("POST","/api/admin/users",body);A.creating=false;A.err=null;toast("Usuario creado");await loadAdmin()}catch(err){A.err=err.message;render()}return}
+  if(f.id==="admedit"){e.preventDefault();
+    try{await api("PATCH","/api/admin/users/"+A.userId,{name:$("#e-name").value,username:$("#e-user").value,email:$("#e-email").value});A.msg={k:"edit",c:"hint",t:"Cambios guardados."};await loadAdmin();await loadDetail(A.userId)}catch(err){A.msg={k:"edit",c:"err",t:err.message};render()}return}
+  if(f.id==="admpw"){e.preventDefault();
+    try{await api("POST","/api/admin/users/"+A.userId+"/password",{password:$("#e-pass").value});A.msg={k:"pw",c:"hint",t:"Contraseña cambiada. Sus sesiones abiertas se han cerrado."};loadDetail(A.userId)}catch(err){A.msg={k:"pw",c:"err",t:err.message};render()}return}
 });
 document.addEventListener("click",async e=>{
   const b=e.target.closest("[data-act]");if(!b||!SERVER)return;const id=b.dataset.id;
   try{switch(b.dataset.act){
-    case"admin":ui.tab="admin";ADM=null;render();loadAdmin();window.scrollTo(0,0);return;
-    case"admreload":ADM=null;render();loadAdmin();return;
-    case"admcancel":ui.admConfirm=null;render();return;
-    case"admpwask":ui.admConfirm={id,kind:"pw"};render();document.getElementById("admpw-"+id)?.focus();return;
-    case"admdelask":ui.admConfirm={id,kind:"del"};render();return;
-    case"admtoggle":{const u=ADM.users.find(x=>x.id===id);await api("POST","/api/admin/users/"+id+"/admin",{isAdmin:!u.isAdmin});toast(u.isAdmin?"Permiso de admin quitado":"Ahora es admin");loadAdmin();return}
-    case"admpw":{const v=document.getElementById("admpw-"+id).value;await api("POST","/api/admin/users/"+id+"/password",{password:v});ui.admConfirm=null;toast("Contraseña cambiada");render();return}
-    case"admdel":await api("DELETE","/api/admin/users/"+id);ui.admConfirm=null;toast("Usuario eliminado");loadAdmin();return;
+    case"admin":ui.tab="admin";A.view="resumen";ADM=null;render();loadAdmin();window.scrollTo(0,0);return;
+    case"admreload":ADM=null;render();await loadAdmin();if(A.view==="user")loadDetail(A.userId);return;
+    case"admview":A.view=b.dataset.v;A.confirm=null;render();window.scrollTo(0,0);return;
+    case"admfilter":A.filter=b.dataset.v;render();return;
+    case"admnewopen":A.creating=true;A.err=null;render();$("#n-name")?.focus();return;
+    case"admnewcancel":A.creating=false;A.err=null;render();return;
+    case"admcsv":csvDownload();return;
+    case"admopen":A.view="user";A.userId=id;A.confirm=null;A.msg=null;window.scrollTo(0,0);loadDetail(id);return;
+    case"admback":A.view="usuarios";A.confirm=null;A.msg=null;render();return;
+    case"admcancel":A.confirm=null;render();return;
+    case"admdelask":A.confirm="del";render();return;
+    case"admtoggle":{await api("POST","/api/admin/users/"+id+"/admin",{isAdmin:!DET.user.isAdmin});toast(DET.user.isAdmin?"Permisos de admin quitados":"Ahora es administrador");await loadAdmin();loadDetail(id);return}
+    case"admkick":await api("POST","/api/admin/users/"+id+"/logout");toast("Sesiones cerradas");loadDetail(id);return;
+    case"admdel":await api("DELETE","/api/admin/users/"+id);toast("Cuenta eliminada");A.view="usuarios";A.confirm=null;await loadAdmin();return;
   }}catch(err){toast(err.message)}
 });
 
@@ -552,8 +677,8 @@ function vPerfiles(){
     ${U.isAdmin?`<button class="btn primary" data-act="admin">Abrir panel de administración</button>`:""}
     <button class="btn" data-act="logout">Cerrar sesión</button></div>
     <form class="card stack" id="pwform" style="margin-top:12px" novalidate><b>Cambiar contraseña</b>
-    <label class="lab">Contraseña actual<input class="txt" id="pw-cur" type="password" autocomplete="current-password"></label>
-    <label class="lab">Nueva contraseña<input class="txt" id="pw-new" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></label>
+    <label class="lab">Contraseña actual${pwField("pw-cur","current-password")}</label>
+    <label class="lab">Nueva contraseña${pwField("pw-new","new-password","Mínimo 6 caracteres")}</label>
     ${ui.pwMsg?`<p class="${ui.pwMsg[0]}" role="status">${esc(ui.pwMsg[1])}</p>`:""}
     <button class="btn" type="submit">Guardar contraseña</button></form>`;
     return h;
