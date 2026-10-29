@@ -187,6 +187,16 @@ body.locked nav.tabs,body.locked #avatar,body.locked #sync{display:none}
 .exadd{display:flex;gap:8px;margin-top:12px}
 .exadd select{flex:1;min-width:0}
 mark{background:var(--accent-soft);color:inherit;border-radius:3px;padding:0 1px}
+.daypv{display:grid;grid-template-columns:28px minmax(0,1fr) 20px;gap:10px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.daypv:hover{border-color:var(--accent)}
+.daypv .dn{font-family:var(--display);font-weight:700;font-size:22px;color:var(--accent);align-self:start}
+.dpv-main{display:flex;flex-direction:column;gap:3px;min-width:0}
+.dpv-main b{font-weight:600;font-size:16.5px}
+.dpv-wd{font-size:13px;font-weight:600;color:var(--accent)}
+.dpv-names{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chev{width:20px;height:20px;color:var(--muted)}
+.txt.dname{margin-top:4px;height:48px;font-family:var(--display);font-weight:700;font-size:28px;background:transparent;border-color:transparent;padding:0 6px;margin-left:-6px;width:calc(100% + 6px)}
+.txt.dname:focus{border-color:var(--accent);background:var(--surface);outline:none}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 </style>
@@ -376,20 +386,43 @@ function vCal(){
   return h;
 }
 
+const WD=[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]];
+const wdText=d=>(d.wd||[]).length?(d.wd||[]).slice().sort((a,b)=>((a+6)%7)-((b+6)%7)).map(w=>DIA[w][0].toUpperCase()+DIA[w].slice(1)).join(", "):"Sin día fijo";
 function vRutina(){
   const days=S.routine.days;
+  const open=ui.rutDay&&dayById(ui.rutDay);
+  if(open)return vRutinaDia(open,days.indexOf(open));
+  ui.rutDay=null;
   let h=`<div class="row" style="justify-content:space-between;margin-bottom:6px"><div><span class="eyebrow">Tu semana</span><h2 class="sec">Días de gym</h2></div>
   <div class="stepper"><button data-act="dminus" aria-label="Quitar un día">−</button><b aria-live="polite">${days.length}</b><button data-act="dplus" aria-label="Añadir un día">+</button></div></div>
-  <p class="hint" style="margin:0 0 14px">Elige cuántos días vas y monta cada uno con sus ejercicios, series y repeticiones.</p>`;
+  <p class="hint" style="margin:0 0 14px">Toca un día para cambiar sus ejercicios, series, repeticiones y qué día de la semana te toca.</p>`;
   if(ui.confirm&&ui.confirm.startsWith("delday:")){const d=dayById(ui.confirm.slice(7));if(d)h+=`<div class="card confirm" style="margin-bottom:12px">¿Quitar el día «${esc(d.name)}»? Tus registros se conservan. <button class="btn small" data-act="deldayyes" data-id="${d.id}" style="color:var(--down)">Quitar</button><button class="btn small ghost" data-act="clearno">Cancelar</button></div>`}
-  h+=`<div class="stack">`;
-  days.forEach((d,i)=>{
-    h+=`<div class="card daycard"><div class="dh"><span class="dn">${i+1}</span><input class="txt title" id="dn-${d.id}" data-dayname="${d.id}" value="${esc(d.name)}" aria-label="Nombre del día ${i+1}"><button class="del" data-act="delday" data-id="${d.id}" aria-label="Quitar día">${ICON.x}</button></div>
-    <div class="wdrow" role="group" aria-label="Días de la semana para ${esc(d.name)}">${[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]].map(([w,l])=>{const own=(d.wd||[]).includes(w);const other=!own&&days.find(o=>o!==d&&(o.wd||[]).includes(w));return`<button class="wd ${other?"taken":""}" aria-pressed="${own}" data-act="wd" data-id="${d.id}" data-w="${w}" aria-label="${DIA[w]}${other?", ahora es "+esc(other.name):""}" title="${other?"Ahora: "+esc(other.name):DIA[w]}">${l}</button>`}).join("")}</div>
-    ${d.ex.length?`<div class="exlabels"><span>Ejercicio</span><span>Series</span><span>Reps</span><span></span></div>`:""}
-    ${d.ex.map(x=>`<div class="exrow"><input id="xn-${x.id}" data-exf="name" data-day="${d.id}" data-x="${x.id}" value="${esc(x.name)}" aria-label="Ejercicio"><input class="num" id="xs-${x.id}" inputmode="numeric" data-exf="sets" data-day="${d.id}" data-x="${x.id}" value="${x.sets}" aria-label="Series"><input class="num" id="xr-${x.id}" data-exf="reps" data-day="${d.id}" data-x="${x.id}" value="${esc(x.reps)}" aria-label="Repeticiones"><button class="del" data-act="delex" data-day="${d.id}" data-id="${x.id}" aria-label="Quitar ejercicio">${ICON.x}</button></div>`).join("")}
-    <div style="margin-top:10px"><button class="btn small" data-act="addex" data-id="${d.id}">+ Ejercicio</button></div></div>`});
-  h+=`</div><p class="hint" style="margin-top:14px">Toca las letras para elegir qué día de la semana te toca cada rutina. Las repes admiten rangos, por ejemplo 8-12.</p>`;
+  if(!days.length)return h+`<div class="card empty">Aún no tienes días de gym.<br><br><button class="btn primary" data-act="dplus">Añadir el primer día</button></div>`;
+  const today=parseD(TODAY).getDay();
+  h+=`<div class="stack">${days.map((d,i)=>{const n=d.ex.length;const names=d.ex.map(x=>x.name).filter(Boolean);const sc=[...new Set(d.ex.map(x=>x.sets+"×"+x.reps))];
+    return `<button class="daypv" data-act="rutopen" data-id="${d.id}" aria-label="Editar ${esc(d.name)}">
+      <span class="dn">${i+1}</span>
+      <span class="dpv-main"><span class="row" style="gap:8px;flex-wrap:wrap"><b>${esc(d.name||"Sin nombre")}</b>${(d.wd||[]).includes(today)?`<span class="badge pr">Hoy</span>`:""}</span>
+      <span class="dpv-wd">${wdText(d)}</span>
+      <span class="hint">${n?`${n} ejercicio${n===1?"":"s"}${sc.length===1?" · "+sc[0]:""}`:"Sin ejercicios todavía"}</span>
+      ${names.length?`<span class="dpv-names">${esc(names.slice(0,3).join(" · "))}${names.length>3?` <span class="hint">y ${names.length-3} más</span>`:""}</span>`:""}</span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>`}).join("")}</div>`;
+  return h;
+}
+function vRutinaDia(d,i){
+  const days=S.routine.days;
+  let h=`<button class="btn small ghost" data-act="rutback" style="padding-left:0">← Rutina</button>
+  <span class="eyebrow" style="display:block;margin-top:6px">Día ${i+1} de ${days.length}</span>
+  <input class="txt title dname" id="dn-${d.id}" data-dayname="${d.id}" value="${esc(d.name)}" placeholder="Nombre del día" aria-label="Nombre del día">
+  <div class="card" style="margin-top:12px"><b style="font-size:14px">¿Qué día de la semana toca?</b>
+  <div class="wdrow" role="group" aria-label="Días de la semana para ${esc(d.name)}">${WD.map(([w,l])=>{const own=(d.wd||[]).includes(w);const other=!own&&days.find(o=>o!==d&&(o.wd||[]).includes(w));return`<button class="wd ${other?"taken":""}" aria-pressed="${own}" data-act="wd" data-id="${d.id}" data-w="${w}" aria-label="${DIA[w]}${other?", ahora es "+esc(other.name):""}" title="${other?"Ahora: "+esc(other.name):DIA[w]}">${l}</button>`}).join("")}</div>
+  <p class="hint" style="margin:8px 0 0">${wdText(d)}. Los días con borde discontinuo ya los tiene otra rutina; si los tocas, pasan a esta.</p></div>
+  <div class="card daycard" style="margin-top:12px"><b style="font-size:14px">Ejercicios</b>
+    ${d.ex.length?`<div class="exlabels"><span>Ejercicio</span><span>Series</span><span>Reps</span><span></span></div>`:`<p class="hint" style="margin:8px 0 0">Añade el primero aquí o desde la pestaña Ejercicios.</p>`}
+    ${d.ex.map(x=>`<div class="exrow"><input id="xn-${x.id}" data-exf="name" data-day="${d.id}" data-x="${x.id}" value="${esc(x.name)}" placeholder="Nombre del ejercicio" aria-label="Ejercicio"><input class="num" id="xs-${x.id}" inputmode="numeric" data-exf="sets" data-day="${d.id}" data-x="${x.id}" value="${x.sets}" aria-label="Series"><input class="num" id="xr-${x.id}" data-exf="reps" data-day="${d.id}" data-x="${x.id}" value="${esc(x.reps)}" aria-label="Repeticiones"><button class="del" data-act="delex" data-day="${d.id}" data-id="${x.id}" aria-label="Quitar ejercicio">${ICON.x}</button></div>`).join("")}
+    <div class="row" style="margin-top:12px;flex-wrap:wrap"><button class="btn small" data-act="addex" data-id="${d.id}">+ Ejercicio</button><button class="btn small ghost" data-tab-go="ejercicios">Buscar en la biblioteca</button></div>
+    <p class="hint" style="margin:10px 0 0">Las repes admiten rangos, por ejemplo 8-12. Los cambios se guardan solos.</p></div>
+  <div style="margin-top:16px">${ui.confirm==="delday:"+d.id?`<div class="card confirm">¿Quitar el día «${esc(d.name)}»? Tus registros se conservan. <button class="btn small" data-act="deldayyes" data-id="${d.id}" style="color:var(--down)">Quitar</button><button class="btn small ghost" data-act="clearno">Cancelar</button></div>`:`<button class="btn ghost small" style="color:var(--down);padding-left:0" data-act="delday" data-id="${d.id}">Quitar este día</button>`}</div>`;
   return h;
 }
 
@@ -463,7 +496,7 @@ document.addEventListener("change",e=>{
 });
 document.addEventListener("click",e=>{
   const tb=e.target.closest("nav.tabs button,[data-tab-go]");
-  if(tb){ui.tab=tb.dataset.tab||tb.dataset.tabGo;ui.confirm=null;render();window.scrollTo(0,0);return}
+  if(tb){ui.tab=tb.dataset.tab||tb.dataset.tabGo;ui.confirm=null;if(tb.dataset.tab)ui.rutDay=null;render();window.scrollTo(0,0);return}
   const b=e.target.closest("[data-act]");if(!b)return;
   const a=b.dataset.act,id=b.dataset.id;
   switch(a){
@@ -479,10 +512,12 @@ document.addEventListener("click",e=>{
     case"clearno":ui.confirm=null;break;
     case"mprev":case"mnext":{const[y,m]=ui.month.split("-").map(Number);const d=new Date(y,m-1+(a==="mnext"?1:-1),1);ui.month=d.getFullYear()+"-"+pad(d.getMonth()+1);break}
     case"goday":ui.date=b.dataset.d;ui.tab="entreno";ui.confirm=null;ui.notesOpen=null;selDay=null;window.scrollTo(0,0);break;
-    case"dplus":if(S.routine.days.length<7){S.routine.days.push({id:uid(),name:"Día "+(S.routine.days.length+1),wd:[],ex:[]});persist("routine")}else toast("Máximo 7 días");break;
+    case"dplus":if(S.routine.days.length<7){const nd={id:uid(),name:"Día "+(S.routine.days.length+1),wd:[],ex:[]};S.routine.days.push(nd);persist("routine");ui.rutDay=nd.id;ui.tab="rutina";window.scrollTo(0,0)}else toast("Máximo 7 días");break;
+    case"rutopen":ui.rutDay=id;ui.confirm=null;window.scrollTo(0,0);break;
+    case"rutback":ui.rutDay=null;ui.confirm=null;window.scrollTo(0,0);break;
     case"dminus":{const d=S.routine.days[S.routine.days.length-1];if(!d)break;if(d.ex.length){ui.confirm="delday:"+d.id}else{S.routine.days.pop();persist("routine")}break}
-    case"delday":{const d=dayById(id);if(d.ex.length)ui.confirm="delday:"+id;else{S.routine.days=S.routine.days.filter(z=>z.id!==id);persist("routine")}break}
-    case"deldayyes":S.routine.days=S.routine.days.filter(z=>z.id!==id);ui.confirm=null;persist("routine");toast("Día quitado");break;
+    case"delday":{const d=dayById(id);if(d.ex.length)ui.confirm="delday:"+id;else{S.routine.days=S.routine.days.filter(z=>z.id!==id);ui.rutDay=null;persist("routine")}break}
+    case"deldayyes":S.routine.days=S.routine.days.filter(z=>z.id!==id);ui.confirm=null;ui.rutDay=null;persist("routine");toast("Día quitado");break;
     case"addex":{const d=dayById(id);const x={id:uid(),name:"",sets:3,reps:"10"};d.ex.push(x);persist("routine");render();const el=document.getElementById("xn-"+x.id);el&&el.focus();return}
     case"wd":{const d=dayById(id);const w=+b.dataset.w;d.wd=d.wd||[];if(d.wd.includes(w))d.wd=d.wd.filter(x=>x!==w);else{S.routine.days.forEach(o=>{if(o.wd)o.wd=o.wd.filter(x=>x!==w)});d.wd.push(w)}persist("routine");break}
     case"profiles":ui.tab="perfiles";ui.confirm=null;window.scrollTo(0,0);break;
