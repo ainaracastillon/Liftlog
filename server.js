@@ -83,6 +83,13 @@ async function migrate() {
     updated_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, key)
   )`);
+  await q(`CREATE TABLE IF NOT EXISTS friends (
+    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    friend_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status text NOT NULL DEFAULT 'pending',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, friend_id)
+  )`);
   await q("DELETE FROM sessions WHERE created_at < now() - interval '90 days'");
 
   // Superadmin inicial, definido con variables de entorno (nunca en el código).
@@ -233,6 +240,98 @@ app.delete("/api/docs/:key", auth, async (req, res, next) => {
   try {
     await q("DELETE FROM docs WHERE user_id = $1 AND key = $2", [req.user.id, req.params.key]);
     res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/* --- amigos --- */
+// user_id envía la solicitud a friend_id. Aceptada = status 'accepted'.
+async function friendIds(uid) {
+  const { rows } = await q(
+    `SELECT CASE WHEN user_id = $1 THEN friend_id ELSE user_id END AS id FROM friends
+     WHERE (user_id = $1 OR friend_id = $1) AND status = 'accepted'`, [uid]);
+  return rows.map((r) => r.id);
+}
+app.get("/api/friends", auth, async (req, res, next) => {
+  try {
+    const uid = req.user.id;
+    const { rows } = await q(
+      `SELECT f.user_id, f.friend_id, f.status, u.id, u.name, u.username
+       FROM friends f JOIN users u ON u.id = CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END
+       WHERE f.user_id = $1 OR f.friend_id = $1`, [uid]);
+    const ids = rows.filter((r) => r.status === "accepted").map((r) => r.id);
+    const stats = {};
+    if (ids.length) {
+      const st = await q("SELECT user_id, data FROM docs WHERE key = 'stats' AND user_id = ANY($1::uuid[])", [ids]);
+      for (const r of st.rows) stats[r.user_id] = r.data;
+    }
+    const pick = (r) => ({ id: r.id, name: r.name, username: r.username });
+    res.json({
+      friends: rows.filter((r) => r.status === "accepted").map((r) => ({ ...pick(r), stats: stats[r.id] || null })),
+      incoming: rows.filter((r) => r.status === "pending" && r.friend_id === uid).map(pick),
+      outgoing: rows.filter((r) => r.status === "pending" && r.user_id === uid).map(pick),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+app.post("/api/friends", auth, async (req, res, next) => {
+  try {
+    const username = String(req.body.username || "").trim().toLowerCase().replace(/^@/, "");
+    const { rows } = await q("SELECT id FROM users WHERE username = $1", [username]);
+    if (!rows.length) return res.status(404).json({ error: "No hay nadie con ese usuario. Revisa cómo se escribe." });
+    const fid = rows[0].id;
+    if (fid === req.user.id) return res.status(400).json({ error: "Ese eres tú." });
+    const ex = await q("SELECT user_id, status FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)", [req.user.id, fid]);
+    if (ex.rows.length) {
+      const r = ex.rows[0];
+      if (r.status === "accepted") return res.json({ status: "accepted" });
+      if (r.user_id === fid) {
+        await q("UPDATE friends SET status = 'accepted' WHERE user_id = $1 AND friend_id = $2", [fid, req.user.id]);
+        return res.json({ status: "accepted" });
+      }
+      return res.status(409).json({ error: "Ya le enviaste una solicitud." });
+    }
+    await q("INSERT INTO friends (user_id, friend_id) VALUES ($1, $2)", [req.user.id, fid]);
+    res.json({ status: "pending" });
+  } catch (e) {
+    next(e);
+  }
+});
+app.post("/api/friends/:id/accept", auth, async (req, res, next) => {
+  try {
+    const r = await q("UPDATE friends SET status = 'accepted' WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'", [req.params.id, req.user.id]);
+    if (!r.rowCount) return res.status(404).json({ error: "Esa solicitud ya no existe." });
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+app.delete("/api/friends/:id", auth, async (req, res, next) => {
+  try {
+    await q("DELETE FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)", [req.user.id, req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+app.get("/api/feed", auth, async (req, res, next) => {
+  try {
+    const ids = [req.user.id, ...(await friendIds(req.user.id))];
+    const { rows } = await q(
+      `SELECT d.user_id, d.key, d.data, d.updated_at, u.name, u.username FROM docs d JOIN users u ON u.id = d.user_id
+       WHERE d.user_id = ANY($1::uuid[]) AND d.key ~ '(^|~)log-\\d{4}-\\d{2}-\\d{2}$'
+       AND substring(d.key from '\\d{4}-\\d{2}-\\d{2}$') >= to_char(now() - interval '30 days', 'YYYY-MM-DD')`, [ids]);
+    const feed = [];
+    for (const r of rows) {
+      const sm = summarizeLog(r.data);
+      if (!sm.sets) continue;
+      feed.push({ me: r.user_id === req.user.id, name: r.name, username: r.username, date: r.key.slice(-10),
+        dayName: (r.data && r.data.dayName) || "", exercises: sm.exercises, sets: sm.sets, volume: Math.round(sm.volume), updatedAt: r.updated_at });
+    }
+    feed.sort((a, b) => (b.date + b.updatedAt > a.date + a.updatedAt ? 1 : -1));
+    res.json({ feed: feed.slice(0, 40) });
   } catch (e) {
     next(e);
   }
