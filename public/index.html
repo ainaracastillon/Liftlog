@@ -21,6 +21,7 @@
   --bg:#F1F5F3; --surface:#FFFFFF; --surface-2:#E8EFEB; --fg:#13211C; --muted:#5A6A63; --line:#D8E2DD;
   --accent:#0F6E56; --accent-2:#1D9E75; --accent-soft:#E1F5EE; --on-accent:#FFFFFF;
   --up:#1D8A64; --up-soft:#DDF3E8; --down:#B9452B; --down-soft:#FBE7E1; --same:#5A6A63;
+  --eq-m:#5A6A63; --eq-a:#0F6E56; --eq-p:#9FE1CB;
   --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
   --r:14px;
@@ -28,11 +29,11 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0D1412; --surface:#16201C; --surface-2:#1D2925; --fg:#E5EEEA; --muted:#8FA39A; --line:#27342F;
   --accent:#5DCAA5; --accent-2:#5DCAA5; --accent-soft:#12372D; --on-accent:#04342C;
-  --up:#6FD3A9; --up-soft:#123A2C; --down:#F0997B; --down-soft:#3A1D15; --same:#8FA39A; color-scheme:dark}}
+  --up:#6FD3A9; --up-soft:#123A2C; --down:#F0997B; --down-soft:#3A1D15; --same:#8FA39A; --eq-m:#9DB0A8; --eq-a:#5DCAA5; --eq-p:#2E5C4C; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0D1412; --surface:#16201C; --surface-2:#1D2925; --fg:#E5EEEA; --muted:#8FA39A; --line:#27342F;
   --accent:#5DCAA5; --accent-2:#5DCAA5; --accent-soft:#12372D; --on-accent:#04342C;
-  --up:#6FD3A9; --up-soft:#123A2C; --down:#F0997B; --down-soft:#3A1D15; --same:#8FA39A; color-scheme:dark}
+  --up:#6FD3A9; --up-soft:#123A2C; --down:#F0997B; --down-soft:#3A1D15; --same:#8FA39A; --eq-m:#9DB0A8; --eq-a:#5DCAA5; --eq-p:#2E5C4C; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--body);font-size:15px;line-height:1.45;margin:0;-webkit-tap-highlight-color:transparent}
@@ -40,16 +41,17 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+html{box-sizing:border-box;height:100%;overflow:hidden;overscroll-behavior:none}
+body{box-sizing:border-box;height:100%;overflow:hidden;overscroll-behavior:none;display:flex;flex-direction:column}
+header.top{flex:0 0 auto;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
 header.top .wrap{display:flex;align-items:center;gap:10px;padding-block:10px}
 .brand{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:.01em;line-height:1}
 .brand small{display:block;font-family:var(--body);font-weight:500;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
 .sync{margin-left:auto;margin-right:4px;white-space:nowrap;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .sync i{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}
 .sync.ok i{background:var(--accent-2)}
-main{padding-block:16px 110px}
-nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+main{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-block:16px 28px}
+nav.tabs{flex:0 0 auto;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
 nav.tabs .wrap{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
 nav.tabs button{background:none;border:0;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;min-width:0;font-weight:500;color:var(--muted)}
 nav.tabs button svg{width:22px;height:22px}
@@ -101,7 +103,7 @@ h2.sec{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.0
 .cal-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .cal-head b{flex:1;font-family:var(--display);font-weight:700;font-size:28px;text-transform:capitalize}
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-.cal .wd{font-size:11px;font-weight:600;color:var(--muted);text-align:center;padding-bottom:4px;letter-spacing:.06em}
+.cal .cwd{font-size:11px;font-weight:600;color:var(--muted);text-align:center;padding-bottom:4px;letter-spacing:.06em}
 .cal button{aspect-ratio:1/1.12;max-width:100%;border:1px solid transparent;background:var(--surface);border-radius:10px;padding:4px 2px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;min-width:0}
 .cal button .num{font-family:var(--display);font-weight:600;font-size:18px;line-height:1.1}
 .cal button .tag{font-size:10px;font-weight:600;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 3px}
@@ -133,7 +135,7 @@ select.sel{height:42px;border:1px solid var(--line);background:var(--surface);bo
 .hist .h:first-child{border-top:0}
 .hist .h .dt{font-size:13px;color:var(--muted)}
 .hist .h .ss{display:flex;flex-wrap:wrap;gap:4px}
-.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13px;font-weight:500;z-index:20}
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13px;font-weight:500;z-index:20}
 .avatar{width:34px;height:34px;border-radius:50%;border:0;color:#fff;font-weight:600;font-size:13px;display:grid;place-items:center;flex:0 0 auto;background:#0F6E56}
 .avatar.big{width:44px;height:44px;font-size:15px}
 .wdrow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:10px}
@@ -202,6 +204,20 @@ mark{background:var(--accent-soft);color:inherit;border-radius:3px;padding:0 1px
 .dsw select{width:100%;height:52px;appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:0 44px 0 14px;font-family:var(--display);font-weight:700;font-size:22px;color:var(--fg)}
 .dsw select:focus{border-color:var(--accent);outline:none}
 .dsw svg{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;color:var(--accent);pointer-events:none}
+.eyebtn{width:38px;height:38px;border:1px solid var(--line);background:var(--surface-2);color:var(--accent);border-radius:10px;display:grid;place-items:center;padding:0;flex:0 0 auto}
+.eyebtn svg{width:20px;height:20px}
+.eyebtn[aria-expanded="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.exinfo{margin-top:10px;padding:12px;border-radius:12px;background:var(--surface-2)}
+.exinfo ol{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14.5px}
+.exinfo .tip{margin-top:10px;background:var(--surface);border-radius:10px;padding:9px 11px;font-size:13.5px}
+.eqrow{display:flex;gap:8px;margin-top:10px}
+.eq{margin:0;flex:1;min-width:0;max-width:220px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 8px 6px;text-align:center}
+.excard .eq{background:var(--surface-2);border-color:transparent}
+.eq svg{width:100%;height:auto;max-height:110px;display:block}
+.eqrow.big .eq svg{max-height:140px}
+.eq figcaption{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.eq .m{fill:var(--eq-m)}.eq .a{fill:var(--eq-a)}.eq .p{fill:var(--eq-p)}.eq .bg{fill:var(--surface-2)}
+.eq .l{fill:none;stroke:var(--eq-m);stroke-width:2.5;stroke-linecap:round}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-x:none}
@@ -240,6 +256,9 @@ button,a,input,select,textarea,label{touch-action:manipulation}
   document.addEventListener("wheel",e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});
   document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&["+","-","=","0"].includes(e.key))e.preventDefault()});
 })();
+const toTop=()=>{const m=document.querySelector("main");if(m)m.scrollTop=0};
+const EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.5 6.6C3.8 8.3 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.4-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
 const LS_KEY="liftlog-v1",LS_KEY2="liftlog-v2";
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,9);
@@ -365,9 +384,9 @@ function vEntreno(){
     const prev=prevFor(x.id,ui.date);
     h+=`<div class="card" data-ex="${x.id}">
       <div class="ex-h"><div class="n"><b>${esc(x.name)}</b><span>Objetivo ${x.sets} × ${esc(x.reps)} reps</span></div>
-      <button class="btn small ghost" data-act="notes" data-id="${x.id}" aria-label="Escribir como en notas">Aa</button></div>
+      <button class="eyebtn" data-act="exinfo" data-id="${x.id}" aria-expanded="${!!(ui.info&&ui.info[x.id])}" aria-label="${ui.info&&ui.info[x.id]?"Ocultar":"Ver"} cómo se hace ${esc(x.name)}">${ui.info&&ui.info[x.id]?EYE_OFF:EYE}</button></div>
+      ${ui.info&&ui.info[x.id]?infoHTML(x.name):""}
       <div class="prev">${prev?`Última vez · ${shortDate(prev.date)} ${prev.sets.map(s=>`<span class="set-pill">${fmtKg(num(s.w))}<em>(${num(s.r)})</em></span>`).join("")}`:"Sin registros anteriores"}</div>
-      <div class="notes" ${ui.notesOpen===x.id?"":"hidden"}><textarea id="nt-${x.id}" data-notes="${x.id}" placeholder="20(7), 22,5(2)" aria-label="Series en formato peso(reps)">${esc(setsText(sets))}</textarea><div class="hint">Escribe peso y entre paréntesis las repes, como en tus notas.</div></div>
       <div class="sets">${rows.map((s,i)=>`<div class="setrow"><span class="no">${i+1}</span>
         <label class="field"><input id="w-${x.id}-${i}" inputmode="decimal" data-ex="${x.id}" data-i="${i}" data-k="w" value="${s.w===""||s.w==null?"":fmtKg(num(s.w))}" placeholder="${prev&&prev.sets[i]?fmtKg(num(prev.sets[i].w)):"0"}" aria-label="Peso serie ${i+1}"><span>kg</span></label>
         <span class="x">×</span>
@@ -392,7 +411,7 @@ function vCal(){
   const monthLogs=sortedDates().filter(d=>d.startsWith(ui.month)&&Object.keys(S.logs[d].entries||{}).length);
   let vol=0,sets=0;monthLogs.forEach(d=>{for(const k in S.logs[d].entries)for(const s of validSets(S.logs[d].entries[k].sets)){vol+=num(s.w)*num(s.r);sets++}});
   let h=`<div class="cal-head"><button class="iconbtn" data-act="mprev" aria-label="Mes anterior">${ICON.left}</button><b>${MES[m-1]} ${y}</b><button class="iconbtn" data-act="mnext" aria-label="Mes siguiente">${ICON.right}</button></div>`;
-  h+=`<div class="cal">${["L","M","X","J","V","S","D"].map(d=>`<span class="wd">${d}</span>`).join("")}`;
+  h+=`<div class="cal">${["L","M","X","J","V","S","D"].map(d=>`<span class="cwd">${d}</span>`).join("")}`;
   for(let i=0;i<startDow;i++)h+=`<button class="out" tabindex="-1" aria-hidden="true"></button>`;
   for(let d=1;d<=nd;d++){const ds=y+"-"+pad(m)+"-"+pad(d);const L=S.logs[ds];const done=L&&Object.keys(L.entries||{}).length;
     const pl=!done&&ds>=TODAY?plannedFor(ds):null;
@@ -514,7 +533,7 @@ document.addEventListener("change",e=>{
 });
 document.addEventListener("click",e=>{
   const tb=e.target.closest("nav.tabs button,[data-tab-go]");
-  if(tb){ui.tab=tb.dataset.tab||tb.dataset.tabGo;ui.confirm=null;if(tb.dataset.tab)ui.rutDay=null;render();window.scrollTo(0,0);return}
+  if(tb){ui.tab=tb.dataset.tab||tb.dataset.tabGo;ui.confirm=null;if(tb.dataset.tab)ui.rutDay=null;render();toTop();return}
   const b=e.target.closest("[data-act]");if(!b)return;
   const a=b.dataset.act,id=b.dataset.id;
   switch(a){
@@ -529,16 +548,16 @@ document.addEventListener("click",e=>{
     case"clearyes":delete S.logs[ui.date];persist("log-"+ui.date);ui.confirm=null;toast("Registro borrado");break;
     case"clearno":ui.confirm=null;break;
     case"mprev":case"mnext":{const[y,m]=ui.month.split("-").map(Number);const d=new Date(y,m-1+(a==="mnext"?1:-1),1);ui.month=d.getFullYear()+"-"+pad(d.getMonth()+1);break}
-    case"goday":ui.date=b.dataset.d;ui.tab="entreno";ui.confirm=null;ui.notesOpen=null;selDay=null;window.scrollTo(0,0);break;
-    case"dplus":if(S.routine.days.length<7){const nd={id:uid(),name:"Día "+(S.routine.days.length+1),wd:[],ex:[]};S.routine.days.push(nd);persist("routine");ui.rutDay=nd.id;ui.tab="rutina";window.scrollTo(0,0)}else toast("Máximo 7 días");break;
-    case"rutopen":ui.rutDay=id;ui.confirm=null;window.scrollTo(0,0);break;
-    case"rutback":ui.rutDay=null;ui.confirm=null;window.scrollTo(0,0);break;
+    case"goday":ui.date=b.dataset.d;ui.tab="entreno";ui.confirm=null;ui.notesOpen=null;selDay=null;toTop();break;
+    case"dplus":if(S.routine.days.length<7){const nd={id:uid(),name:"Día "+(S.routine.days.length+1),wd:[],ex:[]};S.routine.days.push(nd);persist("routine");ui.rutDay=nd.id;ui.tab="rutina";toTop()}else toast("Máximo 7 días");break;
+    case"rutopen":ui.rutDay=id;ui.confirm=null;toTop();break;
+    case"rutback":ui.rutDay=null;ui.confirm=null;toTop();break;
     case"dminus":{const d=S.routine.days[S.routine.days.length-1];if(!d)break;if(d.ex.length){ui.confirm="delday:"+d.id}else{S.routine.days.pop();persist("routine")}break}
     case"delday":{const d=dayById(id);if(d.ex.length)ui.confirm="delday:"+id;else{S.routine.days=S.routine.days.filter(z=>z.id!==id);ui.rutDay=null;persist("routine")}break}
     case"deldayyes":S.routine.days=S.routine.days.filter(z=>z.id!==id);ui.confirm=null;ui.rutDay=null;persist("routine");toast("Día quitado");break;
     case"addex":{const d=dayById(id);const x={id:uid(),name:"",sets:3,reps:"10"};d.ex.push(x);persist("routine");render();const el=document.getElementById("xn-"+x.id);el&&el.focus();return}
     case"wd":{const d=dayById(id);const w=+b.dataset.w;d.wd=d.wd||[];if(d.wd.includes(w))d.wd=d.wd.filter(x=>x!==w);else{S.routine.days.forEach(o=>{if(o.wd)o.wd=o.wd.filter(x=>x!==w)});d.wd.push(w)}persist("routine");break}
-    case"profiles":ui.tab="perfiles";ui.confirm=null;window.scrollTo(0,0);break;
+    case"profiles":ui.tab="perfiles";ui.confirm=null;toTop();break;
     case"useprof":switchProfile(id);persistProfiles();ui.tab="entreno";toast("Ahora entrenas como "+profById(id).name);break;
     case"addprof":{const inp=document.getElementById("newprof");const name=(inp?.value||"").trim();if(!name){ui.profErr="Escribe un nombre para el usuario";break}ui.profErr=null;const p={id:uid(),name,color:COLORS[ALL.profiles.length%COLORS.length]};ALL.profiles.push(p);ALL.data[p.id]=defaults(false);persistProfiles();persist("routine",p.id);switchProfile(p.id);ui.tab="rutina";toast("Usuario creado. Ajusta su rutina");break}
     case"delprof":ui.confirm="delprof:"+id;break;
@@ -546,6 +565,8 @@ document.addEventListener("click",e=>{
     case"logout":logout();return;
     case"reload":reloadData();return;
     case"exopen":{const i=+b.dataset.i;EXQ.open=EXQ.open===i?null:i;break}
+    case"exinfo":ui.info=ui.info||{};ui.info[id]=!ui.info[id];break;
+    case"exsearch":EXQ.q=b.dataset.q||"";EXQ.g="";EXQ.open=null;ui.tab="ejercicios";toTop();break;
     case"exclear":EXQ.q="";EXQ.g="";EXQ.open=null;break;
     case"exadd":{const i=+b.dataset.i;const e=EXERCISES[i];const sel=document.getElementById("exday-"+i);const d=dayById(sel.value);if(!d)break;d.ex.push({id:uid(),name:e.n,sets:4,reps:"12"});persist("routine");toast(e.n+" añadido a "+d.name);break}
     case"delex":{const d=dayById(b.dataset.day);d.ex=d.ex.filter(z=>z.id!==id);persist("routine");break}
@@ -689,12 +710,70 @@ const EXERCISES=[
 {n:"Cinta de correr",g:"Cardio y funcional",m:"Piernas, cardiovascular",e:"Cinta",s:["Empieza caminando unos minutos.","Sube velocidad o inclinación poco a poco.","Mantén la postura erguida sin agarrarte.","Baja el ritmo los últimos minutos."],t:"Caminar con inclinación es un cardio de bajo impacto muy eficaz."},
 {n:"Bicicleta estática",g:"Cardio y funcional",m:"Cuádriceps, cardiovascular",e:"Bicicleta",s:["Ajusta el sillín a la altura de la cadera.","Pedalea a ritmo suave para calentar.","Aumenta la resistencia o haz intervalos.","Termina con unos minutos suaves."],t:"La rodilla debe quedar casi estirada abajo."},
 {n:"Elíptica",g:"Cardio y funcional",m:"Piernas, brazos, cardiovascular",e:"Elíptica",s:["Sube con los pies centrados en los pedales.","Empuja y tira de las asas a la vez.","Ajusta la resistencia.","Mantén el torso erguido."],t:"Sin impacto en las articulaciones."},
-{n:"Remo ergómetro",g:"Cardio y funcional",m:"Piernas, espalda, brazos",e:"Máquina de remo",s:["Empuja primero con las piernas.","Luego inclina el tronco atrás.","Por último tira con los brazos hacia el abdomen.","Vuelve en el orden inverso."],t:"Orden: piernas, tronco, brazos. Y al volver al revés."},
+{n:"Remo ergómetro",g:"Cardio y funcional",m:"Piernas, espalda, brazos",e:"Remo ergómetro",s:["Empuja primero con las piernas.","Luego inclina el tronco atrás.","Por último tira con los brazos hacia el abdomen.","Vuelve en el orden inverso."],t:"Orden: piernas, tronco, brazos. Y al volver al revés."},
 /* ---------------- CUERPO COMPLETO ---------------- */
 {n:"Clean (cargada)",g:"Cuerpo completo",m:"Piernas, glúteo, espalda, trapecio",e:"Barra",s:["Posición de peso muerto con la barra en el suelo.","Sube la barra explosivamente extendiendo la cadera.","Mete los codos rápido para recibirla sobre los hombros.","Ponte de pie y bájala con control."],t:"Técnico; aprende con un entrenador."},
 {n:"Turkish get-up",g:"Cuerpo completo",m:"Hombro, core, glúteo",e:"Kettlebell",s:["Túmbate con la kettlebell arriba en una mano y el brazo estirado.","Incorpórate apoyando el codo y luego la mano contraria.","Sube la cadera, pasa la pierna por debajo y ponte de rodillas.","Levántate sin dejar de mirar el peso y deshaz los pasos."],t:"Hazlo despacio y con poco peso al principio."},
 {n:"Man maker",g:"Cuerpo completo",m:"Cuerpo completo",e:"Mancuernas",s:["Flexión apoyado en las mancuernas.","Remo con cada brazo.","Salta con los pies hacia las manos y haz una cargada.","Termina con un press por encima de la cabeza."],t:"Un ejercicio muy exigente para circuitos."}
 ];
+
+const EX_ALIAS={"biceps":"Curl de bíceps con mancuernas","triceps":"Extensión de tríceps en polea","abdominales":"Crunch abdominal","abs":"Crunch abdominal","hombro posterior":"Pájaros (hombro posterior)","gluteo medio":"Abducción de cadera en máquina (glúteo medio)","flexion de rodilla":"Curl femoral tumbado","flexion rodilla":"Curl femoral tumbado","plancha tumbado":"Plancha","plancha tumbada":"Plancha","elevacion de pecho":"Cruce de poleas","elevacion pecho":"Cruce de poleas","press con mancuernas":"Press plano con mancuernas","press mancuernas":"Press plano con mancuernas","aperturas de pecho":"Aperturas con mancuernas","aperturas pecho":"Aperturas con mancuernas","apertura":"Aperturas con mancuernas","press en maquina":"Press en máquina de pecho","press maquina":"Press en máquina de pecho","fondos de triceps":"Fondos de tríceps en banco","fondo triceps":"Fondos de tríceps en banco","press plano":"Press de banca con barra","press banca":"Press de banca con barra","press inclinado manc.":"Press inclinado con mancuernas","press inclinado":"Press inclinado con barra","remo en polea":"Remo gironda (remo en polea baja)","hombro (press militar)":"Press militar con barra","hombro":"Press de hombro con mancuernas","remo girondo":"Remo gironda (remo en polea baja)","sentadillas":"Sentadilla con barra","zancada":"Zancadas","gemelo":"Elevación de gemelos de pie","gemelos":"Elevación de gemelos de pie","cardio":"Cinta de correr","trx":"Remo TRX"};
+const STOP=new Set(["de","con","en","a","al","la","el","y","una","un","los","las","del"]);
+function findExercise(name){
+  const n=norm(name).trim();if(!n)return null;
+  if(EX_ALIAS[n])return EXERCISES.find(e=>e.n===EX_ALIAS[n])||null;
+  let e=EXERCISES.find(x=>norm(x.n)===n);if(e)return e;
+  e=EXERCISES.find(x=>norm(x.n).startsWith(n+" ")||norm(x.n).startsWith(n+"("));if(e)return e;
+  e=EXERCISES.find(x=>n.startsWith(norm(x.n)));if(e)return e;
+  const words=n.replace(/[().,]/g," ").split(/\s+/).filter(w=>w.length>2&&!STOP.has(w));
+  let best=null,score=0;
+  for(const x of EXERCISES){const t=norm(x.n+" "+x.m);let sc=0;for(const w of words){if(norm(x.n).includes(w))sc+=2;else if(t.includes(w))sc+=1}if(sc>score){score=sc;best=x}}
+  return score>=2?best:null;
+}
+function infoHTML(name){
+  const e=findExercise(name);
+  if(!e)return `<div class="exinfo"><p class="hint" style="margin:0">No tengo la explicación de «${esc(name)}». Busca uno parecido en la biblioteca.</p><button class="btn small" style="margin-top:8px" data-act="exsearch" data-q="${esc(name)}">Buscar en Ejercicios</button></div>`;
+  return `<div class="exinfo">${norm(e.n)!==norm(name)?`<div class="eyebrow" style="margin-bottom:4px">${esc(e.n)}</div>`:""}${equipHTML(e.e)}<div class="exmeta"><span>Músculos: <b>${esc(e.m)}</b></span><span>Material: <b>${esc(e.e)}</b></span></div><ol>${e.s.map(x=>`<li>${esc(x)}</li>`).join("")}</ol><div class="tip"><b>Consejo:</b> ${esc(e.t)}</div></div>`;
+}
+
+/* Ilustraciones del material: viewBox 0 0 120 80. Colores por clase: m = metal, a = acento, p = acolchado, l = línea */
+const EQ_SVG={
+barra:`<rect class="m" x="6" y="38" width="108" height="4" rx="2"/><rect class="a" x="18" y="22" width="7" height="36" rx="2"/><rect class="a" x="26" y="27" width="5" height="26" rx="2"/><rect class="a" x="95" y="22" width="7" height="36" rx="2"/><rect class="a" x="89" y="27" width="5" height="26" rx="2"/><rect class="m" x="32" y="35" width="3" height="10" rx="1"/><rect class="m" x="85" y="35" width="3" height="10" rx="1"/>`,
+mancuernas:`<g><rect class="m" x="30" y="24" width="60" height="5" rx="2.5"/><path class="a" d="M14 16h14v21H14z" rx="3"/><path class="a" d="M92 16h14v21H92z"/><rect class="p" x="20" y="14" width="4" height="25" rx="1"/><rect class="p" x="96" y="14" width="4" height="25" rx="1"/></g><g transform="translate(0,30)"><rect class="m" x="30" y="24" width="60" height="5" rx="2.5"/><path class="a" d="M14 16h14v21H14z"/><path class="a" d="M92 16h14v21H92z"/><rect class="p" x="20" y="14" width="4" height="25" rx="1"/><rect class="p" x="96" y="14" width="4" height="25" rx="1"/></g>`,
+banco:`<rect class="p" x="14" y="30" width="92" height="12" rx="5"/><rect class="m" x="24" y="42" width="5" height="26"/><rect class="m" x="91" y="42" width="5" height="26"/><rect class="m" x="16" y="66" width="22" height="4" rx="2"/><rect class="m" x="82" y="66" width="22" height="4" rx="2"/><rect class="m" x="28" y="52" width="64" height="4"/>`,
+disco:`<circle class="a" cx="60" cy="40" r="32"/><circle class="p" cx="60" cy="40" r="22" opacity=".35"/><circle class="m" cx="60" cy="40" r="7"/><circle class="bg" cx="60" cy="40" r="3.5"/><rect class="p" x="44" y="14" width="10" height="5" rx="2.5" opacity=".6"/>`,
+kettlebell:`<path d="M44 30c0-16 32-16 32 0" fill="none" style="stroke:var(--eq-m);stroke-width:7"/><circle class="a" cx="60" cy="50" r="22"/><rect class="m" x="40" y="68" width="40" height="5" rx="2.5"/><rect class="p" x="50" y="44" width="20" height="10" rx="3" opacity=".5"/>`,
+barrafija:`<rect class="m" x="20" y="8" width="5" height="66"/><rect class="m" x="95" y="8" width="5" height="66"/><rect class="m" x="10" y="12" width="100" height="5" rx="2.5"/><rect class="a" x="34" y="10" width="10" height="9" rx="2"/><rect class="a" x="76" y="10" width="10" height="9" rx="2"/><rect class="m" x="12" y="72" width="22" height="4" rx="2"/><rect class="m" x="86" y="72" width="22" height="4" rx="2"/>`,
+paralelas:`<rect class="m" x="22" y="34" width="5" height="40"/><rect class="m" x="93" y="34" width="5" height="40"/><rect class="m" x="40" y="42" width="5" height="32"/><rect class="m" x="75" y="42" width="5" height="32"/><rect class="a" x="14" y="28" width="38" height="6" rx="3"/><rect class="a" x="68" y="28" width="38" height="6" rx="3"/><rect class="m" x="14" y="72" width="92" height="4" rx="2"/>`,
+polea:`<rect class="m" x="14" y="6" width="6" height="68"/><rect class="m" x="40" y="6" width="6" height="68"/><rect class="m" x="12" y="4" width="36" height="5" rx="2"/><rect class="a" x="22" y="40" width="16" height="28" rx="2"/><path d="M22 46h16M22 52h16M22 58h16" class="l"/><circle class="p" cx="56" cy="14" r="6"/><path class="l" d="M56 20 L92 52"/><rect class="a" x="86" y="50" width="24" height="5" rx="2.5" transform="rotate(-20 98 52)"/><rect class="m" x="8" y="72" width="44" height="4" rx="2"/>`,
+smith:`<rect class="m" x="16" y="4" width="6" height="70"/><rect class="m" x="98" y="4" width="6" height="70"/><rect class="m" x="14" y="2" width="92" height="5" rx="2"/><rect class="m" x="8" y="34" width="104" height="4" rx="2"/><rect class="a" x="26" y="22" width="7" height="28" rx="2"/><rect class="a" x="87" y="22" width="7" height="28" rx="2"/><rect class="m" x="10" y="72" width="100" height="4" rx="2"/>`,
+prensa:`<path d="M10 72 L96 20" fill="none" style="stroke:var(--eq-m);stroke-width:5"/><rect class="p" x="14" y="44" width="34" height="10" rx="4" transform="rotate(-10 30 50)"/><rect class="p" x="10" y="30" width="10" height="26" rx="4" transform="rotate(-25 15 43)"/><rect class="a" x="70" y="18" width="30" height="8" rx="2" transform="rotate(-31 85 22)"/><circle class="a" cx="96" cy="40" r="12"/><circle class="m" cx="96" cy="40" r="3"/><rect class="m" x="6" y="72" width="108" height="4" rx="2"/>`,
+hack:`<path d="M30 74 L70 8 M50 74 L90 8" class="l" style="stroke-width:5"/><rect class="p" x="44" y="32" width="12" height="30" rx="4" transform="rotate(31 50 47)"/><rect class="a" x="54" y="22" width="22" height="7" rx="3" transform="rotate(31 65 25)"/><rect class="a" x="20" y="66" width="34" height="6" rx="2"/><rect class="m" x="10" y="72" width="100" height="4" rx="2"/>`,
+extension:`<rect class="p" x="28" y="36" width="40" height="10" rx="4"/><rect class="p" x="26" y="8" width="10" height="34" rx="4"/><rect class="m" x="44" y="46" width="6" height="26"/><path class="l" d="M68 40 L90 62" style="stroke-width:5"/><rect class="a" x="84" y="58" width="16" height="10" rx="5"/><rect class="m" x="16" y="72" width="76" height="4" rx="2"/><circle class="m" cx="68" cy="40" r="4"/>`,
+curlfemoral:`<rect class="p" x="10" y="32" width="70" height="10" rx="4" transform="rotate(-6 45 37)"/><rect class="m" x="20" y="42" width="5" height="30"/><rect class="m" x="64" y="40" width="5" height="32"/><path class="l" d="M82 34 L104 30" style="stroke-width:5"/><rect class="a" x="98" y="22" width="12" height="16" rx="6"/><rect class="m" x="12" y="72" width="70" height="4" rx="2"/>`,
+contractora:`<rect class="m" x="54" y="4" width="12" height="70"/><rect class="p" x="48" y="38" width="24" height="9" rx="4"/><rect class="p" x="52" y="12" width="16" height="26" rx="4"/><rect class="a" x="18" y="14" width="10" height="34" rx="4"/><rect class="a" x="92" y="14" width="10" height="34" rx="4"/><path class="l" d="M28 18 Q40 8 54 12 M92 18 Q80 8 66 12"/><rect class="m" x="36" y="72" width="48" height="4" rx="2"/>`,
+abductora:`<rect class="p" x="40" y="34" width="40" height="10" rx="4"/><rect class="p" x="44" y="6" width="32" height="28" rx="5"/><rect class="a" x="28" y="40" width="10" height="24" rx="4" transform="rotate(-15 33 52)"/><rect class="a" x="82" y="40" width="10" height="24" rx="4" transform="rotate(15 87 52)"/><rect class="m" x="57" y="44" width="6" height="28"/><rect class="m" x="34" y="72" width="52" height="4" rx="2"/>`,
+maquina:`<rect class="m" x="12" y="4" width="5" height="70"/><rect class="m" x="33" y="4" width="5" height="70"/><rect class="a" x="18" y="38" width="14" height="30" rx="2"/><path d="M18 44h14M18 50h14M18 56h14M18 62h14" class="l"/><rect class="m" x="24" y="10" width="3" height="28"/><rect class="p" x="56" y="44" width="34" height="9" rx="4"/><rect class="p" x="84" y="16" width="9" height="30" rx="4"/><rect class="m" x="70" y="53" width="5" height="19"/><path class="l" d="M38 20 H66 M66 20 v14" style="stroke-width:4"/><rect class="a" x="58" y="30" width="16" height="5" rx="2.5"/><rect class="m" x="8" y="72" width="94" height="4" rx="2"/>`,
+hiperext:`<path class="l" d="M24 72 L60 30 M96 72 L60 30" style="stroke-width:5"/><rect class="p" x="44" y="22" width="40" height="11" rx="4" transform="rotate(-30 64 27)"/><rect class="a" x="74" y="46" width="12" height="9" rx="4"/><rect class="a" x="86" y="54" width="12" height="9" rx="4"/><rect class="m" x="16" y="72" width="88" height="4" rx="2"/>`,
+scott:`<rect class="p" x="30" y="22" width="40" height="14" rx="5" transform="rotate(-25 50 29)"/><rect class="m" x="52" y="36" width="5" height="36"/><rect class="p" x="62" y="50" width="30" height="9" rx="4"/><rect class="m" x="74" y="59" width="5" height="13"/><rect class="m" x="38" y="72" width="60" height="4" rx="2"/><rect class="m" x="22" y="12" width="40" height="3" rx="1.5" transform="rotate(-25 42 14)"/>`,
+trx:`<rect class="m" x="10" y="2" width="100" height="5" rx="2"/><rect class="a" x="56" y="6" width="8" height="10" rx="2"/><path class="l" d="M60 16 L44 64 M60 16 L76 64" style="stroke-width:3;stroke:var(--eq-a)"/><rect class="m" x="36" y="64" width="16" height="6" rx="3"/><rect class="m" x="68" y="64" width="16" height="6" rx="3"/>`,
+goma:`<ellipse cx="60" cy="40" rx="40" ry="22" fill="none" style="stroke:var(--eq-a);stroke-width:8"/><ellipse cx="60" cy="40" rx="40" ry="22" fill="none" style="stroke:var(--eq-p);stroke-width:2;opacity:.5"/>`,
+comba:`<path d="M24 22 C24 80, 96 80, 96 22" fill="none" style="stroke:var(--eq-a);stroke-width:3"/><rect class="m" x="19" y="6" width="10" height="20" rx="5"/><rect class="m" x="91" y="6" width="10" height="20" rx="5"/>`,
+cajon:`<path class="a" d="M24 30 L84 30 L84 74 L24 74 Z"/><path class="p" d="M24 30 L42 16 L102 16 L84 30 Z" opacity=".7"/><path class="m" d="M84 30 L102 16 L102 60 L84 74 Z"/><rect class="bg" x="44" y="48" width="20" height="6" rx="3" opacity=".7"/>`,
+balon:`<circle class="a" cx="60" cy="40" r="32"/><path class="l" d="M28 40 H92 M60 8 C44 24 44 56 60 72 M60 8 C76 24 76 56 60 72" style="stroke:var(--eq-p);opacity:.7"/>`,
+cuerdas:`<rect class="m" x="96" y="30" width="16" height="20" rx="3"/><path d="M96 36 C80 20, 70 52, 54 36 S 28 20, 12 30" fill="none" style="stroke:var(--eq-a);stroke-width:5"/><path d="M96 44 C80 60, 70 28, 54 44 S 28 60, 12 52" fill="none" style="stroke:var(--eq-a);stroke-width:5"/><rect class="m" x="4" y="26" width="12" height="7" rx="3"/><rect class="m" x="4" y="48" width="12" height="7" rx="3"/>`,
+cinta:`<rect class="a" x="8" y="58" width="96" height="10" rx="5"/><rect class="m" x="84" y="14" width="5" height="46" transform="rotate(10 86 37)"/><rect class="p" x="78" y="8" width="30" height="12" rx="3"/><circle class="m" cx="18" cy="70" r="4"/><circle class="m" cx="94" cy="70" r="4"/>`,
+bici:`<rect class="m" x="20" y="70" width="80" height="5" rx="2.5"/><path class="l" d="M40 70 L52 34 L80 34 L86 70" style="stroke-width:5"/><rect class="p" x="42" y="26" width="20" height="7" rx="3"/><path class="l" d="M80 34 L84 18" style="stroke-width:4"/><rect class="a" x="78" y="12" width="20" height="6" rx="3"/><circle class="a" cx="64" cy="56" r="12"/><circle class="m" cx="64" cy="56" r="3"/>`,
+eliptica:`<rect class="m" x="6" y="70" width="108" height="5" rx="2.5"/><circle class="a" cx="24" cy="52" r="14"/><path class="l" d="M24 52 L82 62 M30 50 L88 54" style="stroke-width:4"/><rect class="p" x="70" y="56" width="26" height="6" rx="3"/><path class="l" d="M94 70 L94 22" style="stroke-width:5"/><path class="l" d="M82 10 L94 30 L106 10" style="stroke-width:4;stroke:var(--eq-a)"/>`,
+remoergo:`<rect class="m" x="6" y="58" width="108" height="5" rx="2.5"/><circle class="a" cx="20" cy="46" r="14"/><circle class="m" cx="20" cy="46" r="4"/><rect class="p" x="60" y="50" width="22" height="8" rx="3"/><rect class="m" x="34" y="44" width="10" height="14" rx="2"/><path class="l" d="M20 46 L48 40" style="stroke-width:2"/><rect class="a" x="44" y="36" width="16" height="5" rx="2.5"/><rect class="m" x="10" y="62" width="5" height="12"/><rect class="m" x="104" y="62" width="5" height="12"/>`,
+rueda:`<rect class="m" x="14" y="37" width="92" height="6" rx="3"/><circle class="a" cx="60" cy="40" r="24"/><circle class="p" cx="60" cy="40" r="14" opacity=".4"/><circle class="m" cx="60" cy="40" r="4"/><rect class="p" x="8" y="34" width="16" height="12" rx="5"/><rect class="p" x="96" y="34" width="16" height="12" rx="5"/>`,
+esterilla:`<rect class="a" x="10" y="44" width="80" height="16" rx="3"/><ellipse class="a" cx="92" cy="44" rx="16" ry="16"/><ellipse class="p" cx="92" cy="44" rx="9" ry="9" opacity=".5"/><ellipse class="m" cx="92" cy="44" rx="3" ry="3"/><rect class="m" x="6" y="62" width="104" height="3" rx="1.5" opacity=".4"/>`,
+pared:`<g class="m">${[0,1,2,3].map(r=>[0,1,2,3].map(c=>`<rect x="${10+c*26+(r%2?13:0)}" y="${8+r*17}" width="22" height="13" rx="2"/>`).join("")).join("")}</g>`
+};
+const EQ_NAME={barra:"Barra",mancuernas:"Mancuernas",banco:"Banco",disco:"Disco",kettlebell:"Kettlebell",barrafija:"Barra de dominadas",paralelas:"Paralelas",polea:"Polea",smith:"Máquina Smith",prensa:"Prensa",hack:"Máquina hack",extension:"Máquina de extensiones",curlfemoral:"Máquina de curl femoral",contractora:"Contractora",abductora:"Máquina abductora / aductora",maquina:"Máquina",hiperext:"Banco de hiperextensiones",scott:"Banco Scott",trx:"TRX",goma:"Goma elástica",comba:"Comba",cajon:"Cajón",balon:"Balón medicinal",cuerdas:"Cuerdas de batalla",cinta:"Cinta de correr",bici:"Bicicleta estática",eliptica:"Elíptica",remoergo:"Remo ergómetro",rueda:"Rueda abdominal",esterilla:"Peso corporal",pared:"Pared"};
+const EQ_RULES=[["smith","smith"],["hack","hack"],["prensa","prensa"],["extensiones","extension"],["curl tumbado","curlfemoral"],["curl sentado","curlfemoral"],["curl femoral","curlfemoral"],["abductora","abductora"],["aductora","abductora"],["contractora","contractora"],["pec deck","contractora"],["hiperextensiones","hiperext"],["scott","scott"],["ergometro","remoergo"],["eliptica","eliptica"],["bicicleta","bici"],["cinta","cinta"],["rueda","rueda"],["trx","trx"],["cuerdas","cuerdas"],["balon","balon"],["comba","comba"],["cajon","cajon"],["kettlebell","kettlebell"],["barra fija","barrafija"],["barra baja","barra"],["paralelas","paralelas"],["fondos","paralelas"],["polea","polea"],["maquina","maquina"],["mancuerna","mancuernas"],["barra","barra"],["disco","disco"],["goma","goma"],["banco","banco"],["pared","pared"],["peso corporal","esterilla"]];
+function equipKeys(e){const n=norm(e);const out=[];for(const [k,v] of EQ_RULES){if(n.includes(k)&&!out.includes(v)&&(!out.length||v==="banco"))out.push(v);if(out.length===2)break}if(!out.length)out.push("esterilla");return out}
+function equipHTML(e,big){return `<div class="eqrow ${big?"big":""}">${equipKeys(e).map(k=>`<figure class="eq"><svg viewBox="0 0 120 80" role="img" aria-label="${EQ_NAME[k]}">${EQ_SVG[k]}</svg><figcaption>${EQ_NAME[k]}</figcaption></figure>`).join("")}</div>`}
 
 const EX_GROUPS=["Pecho","Espalda","Hombro","Bíceps","Tríceps","Antebrazo","Cuádriceps","Femoral","Glúteo","Gemelo","Abdomen","Lumbar","Cardio y funcional","Cuerpo completo"];
 const EX_META={"Pierna (todo)":["Cuádriceps","Femoral","Glúteo","Gemelo"],"Brazos (todo)":["Bíceps","Tríceps","Antebrazo"],"Core (todo)":["Abdomen","Lumbar"]};
@@ -714,7 +793,7 @@ function vEjercicios(){
   if(!list.length)return h+`<div class="card empty">No hay ejercicios con «${esc(EXQ.q)}»${EXQ.g?" en "+esc(EXQ.g):""}. Prueba con otro nombre o músculo.</div>`;
   h+=`<div class="exlist">${list.map(e=>{const i=EXERCISES.indexOf(e);const open=EXQ.open===i;const inr=inRoutine(e.n);
     return `<div class="excard"><button data-act="exopen" data-i="${i}" aria-expanded="${open}"><span style="min-width:0"><b>${hl(e.n,q)}</b><span class="hint">${hl(e.m,q)}</span>${inr.length?`<span class="inr">✓ En tu rutina: ${esc(inr.join(", "))}</span>`:""}</span><span class="gtag">${esc(e.g)}</span></button>
-    ${open?`<div class="exbody"><div class="exmeta"><span>Material: <b>${esc(e.e)}</b></span></div><ol>${e.s.map(x=>`<li>${esc(x)}</li>`).join("")}</ol><div class="tip"><b>Consejo:</b> ${esc(e.t)}</div>
+    ${open?`<div class="exbody">${equipHTML(e.e,true)}<div class="exmeta"><span>Material: <b>${esc(e.e)}</b></span></div><ol>${e.s.map(x=>`<li>${esc(x)}</li>`).join("")}</ol><div class="tip"><b>Consejo:</b> ${esc(e.t)}</div>
     ${S.routine.days.length?`<div class="exadd"><select class="sel" id="exday-${i}" aria-label="Día de la rutina">${S.routine.days.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("")}</select><button class="btn primary" data-act="exadd" data-i="${i}">Añadir</button></div>`:""}</div>`:""}</div>`}).join("")}</div>`;
   return h;
 }
@@ -800,8 +879,6 @@ async function startServer(user,fresh){
 async function logout(){try{await api("POST","/api/logout")}catch(e){}SERVER=null;store=null;try{localStorage.removeItem(LS_KEY2)}catch(e){}authMode="login";showAuth()}
 
 /* ---------- contraseñas con ojo ---------- */
-const EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
-const EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.5 6.6C3.8 8.3 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.4-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
 const pwField=(id,ac,ph="")=>`<span class="pwfield"><input class="txt" id="${id}" type="password" autocomplete="${ac}" placeholder="${ph}" autocapitalize="none" spellcheck="false"><button type="button" class="eye" data-eye="${id}" aria-label="Mostrar contraseña" aria-pressed="false">${EYE}</button></span>`;
 document.addEventListener("click",e=>{const b=e.target.closest("[data-eye]");if(!b)return;e.preventDefault();const i=document.getElementById(b.dataset.eye);if(!i)return;const show=i.type==="password";i.type=show?"text":"password";b.innerHTML=show?EYE_OFF:EYE;b.setAttribute("aria-pressed",show);b.setAttribute("aria-label",show?"Ocultar contraseña":"Mostrar contraseña");i.focus()});
 
@@ -924,14 +1001,14 @@ document.addEventListener("submit",async e=>{
 document.addEventListener("click",async e=>{
   const b=e.target.closest("[data-act]");if(!b||!SERVER)return;const id=b.dataset.id;
   try{switch(b.dataset.act){
-    case"admin":ui.tab="admin";A.view="resumen";ADM=null;render();loadAdmin();window.scrollTo(0,0);return;
+    case"admin":ui.tab="admin";A.view="resumen";ADM=null;render();loadAdmin();toTop();return;
     case"admreload":ADM=null;render();await loadAdmin();if(A.view==="user")loadDetail(A.userId);return;
-    case"admview":A.view=b.dataset.v;A.confirm=null;render();window.scrollTo(0,0);return;
+    case"admview":A.view=b.dataset.v;A.confirm=null;render();toTop();return;
     case"admfilter":A.filter=b.dataset.v;render();return;
     case"admnewopen":A.creating=true;A.err=null;render();$("#n-name")?.focus();return;
     case"admnewcancel":A.creating=false;A.err=null;render();return;
     case"admcsv":csvDownload();return;
-    case"admopen":A.view="user";A.userId=id;A.confirm=null;A.msg=null;window.scrollTo(0,0);loadDetail(id);return;
+    case"admopen":A.view="user";A.userId=id;A.confirm=null;A.msg=null;toTop();loadDetail(id);return;
     case"admback":A.view="usuarios";A.confirm=null;A.msg=null;render();return;
     case"admcancel":A.confirm=null;render();return;
     case"admdelask":A.confirm="del";render();return;
