@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0F6E56">
 <meta name="description" content="Liftlog: tu libreta de gimnasio. Monta tu rutina, apunta peso y repeticiones y mira cómo progresas.">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -199,6 +199,9 @@ mark{background:var(--accent-soft);color:inherit;border-radius:3px;padding:0 1px
 .txt.dname:focus{border-color:var(--accent);background:var(--surface);outline:none}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
+html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-x:none}
+button,a,input,select,textarea,label{touch-action:manipulation}
+.txt,.lab .txt,.exrow input,.sel,select.sel,input[type=search]{font-size:16px}
 </style>
 </head>
 <body>
@@ -223,6 +226,15 @@ mark{background:var(--accent-soft);color:inherit;border-radius:3px;padding:0 1px
 </div></nav>
 
 <script>
+(function noZoom(){
+  const vp=document.querySelector('meta[name=viewport]');
+  if(vp)vp.setAttribute("content","width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover");
+  ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+  document.addEventListener("touchmove",e=>{if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});
+  let last=0;document.addEventListener("touchend",e=>{const now=Date.now();if(now-last<300&&!e.target.closest("input,textarea,select"))e.preventDefault();last=now},{passive:false});
+  document.addEventListener("wheel",e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});
+  document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&["+","-","=","0"].includes(e.key))e.preventDefault()});
+})();
 const LS_KEY="liftlog-v1",LS_KEY2="liftlog-v2";
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,9);
