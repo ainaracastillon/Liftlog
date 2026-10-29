@@ -846,7 +846,7 @@ const EXERCISES=[
 {n:"Man maker",g:"Cuerpo completo",m:"Cuerpo completo",e:"Mancuernas",s:["Flexión apoyado en las mancuernas.","Remo con cada brazo.","Salta con los pies hacia las manos y haz una cargada.","Termina con un press por encima de la cabeza."],t:"Un ejercicio muy exigente para circuitos."}
 ];
 
-const EX_ALIAS={"biceps":"Curl de bíceps con mancuernas","triceps":"Extensión de tríceps en polea","abdominales":"Crunch abdominal","abs":"Crunch abdominal","hombro posterior":"Pájaros (hombro posterior)","gluteo medio":"Abducción de cadera en máquina (glúteo medio)","flexion de rodilla":"Curl femoral tumbado","flexion rodilla":"Curl femoral tumbado","plancha tumbado":"Plancha","plancha tumbada":"Plancha","elevacion de pecho":"Cruce de poleas","elevacion pecho":"Cruce de poleas","press con mancuernas":"Press plano con mancuernas","press mancuernas":"Press plano con mancuernas","aperturas de pecho":"Aperturas con mancuernas","aperturas pecho":"Aperturas con mancuernas","apertura":"Aperturas con mancuernas","press en maquina":"Press en máquina de pecho","press maquina":"Press en máquina de pecho","fondos de triceps":"Fondos de tríceps en banco","fondo triceps":"Fondos de tríceps en banco","press plano":"Press de banca con barra","press banca":"Press de banca con barra","press inclinado manc.":"Press inclinado con mancuernas","press inclinado":"Press inclinado con barra","remo en polea":"Remo gironda (remo en polea baja)","hombro (press militar)":"Press militar con barra","hombro":"Press de hombro con mancuernas","remo girondo":"Remo gironda (remo en polea baja)","sentadillas":"Sentadilla con barra","zancada":"Zancadas","gemelo":"Elevación de gemelos de pie","gemelos":"Elevación de gemelos de pie","cardio":"Cinta de correr","trx":"Remo TRX"};
+const EX_ALIAS={"biceps":"Curl de bíceps con mancuernas","triceps":"Extensión de tríceps en polea","abdominales":"Crunch abdominal","abs":"Crunch abdominal","hombro posterior":"Pájaros (hombro posterior)","gluteo medio":"Abducción de cadera en máquina (glúteo medio)","flexion de rodilla":"Curl femoral tumbado","flexion rodilla":"Curl femoral tumbado","plancha tumbado":"Plancha","plancha tumbada":"Plancha","elevacion de pecho":"Cruce de poleas","elevacion pecho":"Cruce de poleas","press con mancuernas":"Press plano con mancuernas","press mancuernas":"Press plano con mancuernas","aperturas de pecho":"Aperturas en máquina (contractora)","aperturas pecho":"Aperturas en máquina (contractora)","apertura":"Aperturas en máquina (contractora)","press en maquina":"Press en máquina de pecho","press maquina":"Press en máquina de pecho","fondos de triceps":"Fondos de tríceps en banco","fondo triceps":"Fondos de tríceps en banco","press plano":"Press de banca con barra","press banca":"Press de banca con barra","press inclinado manc.":"Press inclinado con mancuernas","press inclinado":"Press inclinado con barra","remo en polea":"Remo gironda (remo en polea baja)","hombro (press militar)":"Press militar con barra","hombro":"Press de hombro con mancuernas","remo girondo":"Remo gironda (remo en polea baja)","sentadillas":"Sentadilla con barra","zancada":"Zancadas","gemelo":"Elevación de gemelos de pie","gemelos":"Elevación de gemelos de pie","cardio":"Cinta de correr","trx":"Remo TRX"};
 const STOP=new Set(["de","con","en","a","al","la","el","y","una","un","los","las","del"]);
 function findExercise(name){
   const n=norm(name).trim();if(!n)return null;
@@ -994,7 +994,12 @@ const PR={
   cable:(J,x,y)=>{const h=J.arm1[1];return `<path d="M${h[0]} ${h[1]}L${x} ${y}" stroke="var(--eq-m)" stroke-width="1.6"/><circle cx="${x}" cy="${y}" r="4.5" fill="var(--eq-m)"/><rect x="${h[0]-6}" y="${h[1]-2}" width="12" height="4" rx="2" fill="var(--eq-a)"/>`},
   bench:(J,x1,x2,y)=>`<rect x="${x1}" y="${y}" width="${x2-x1}" height="7" rx="3" fill="var(--eq-p)" stroke="var(--eq-m)" stroke-width="1"/><path d="M${x1+8} ${y+7}V${FG.G}M${x2-8} ${y+7}V${FG.G}" stroke="var(--eq-m)" stroke-width="3"/>`,
   pad:(J,x1,y1,x2,y2)=>`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="var(--eq-p)" stroke-width="8" stroke-linecap="round"/><path d="M${(x1+x2)/2} ${(y1+y2)/2}V${FG.G}" stroke="var(--eq-m)" stroke-width="3"/>`,
-  pullbar:(J,y)=>`<path d="M14 ${y}H146" stroke="var(--eq-m)" stroke-width="3.5" stroke-linecap="round"/><path d="M14 ${y}V${FG.G}M146 ${y}V${FG.G}" stroke="var(--eq-m)" stroke-width="2.5" opacity=".6"/>`,
+  pullbar:(J,y,side)=>{const h=J.arm1[1];const sd=side||-1;const px=h[0]+sd*40;return `<path d="M${px} ${y-6}V${FG.G}M${px-12} ${FG.G}H${px+12}" stroke="var(--eq-m)" stroke-width="4" stroke-linecap="round"/><path d="M${px} ${y-6}H${h[0]}" stroke="var(--eq-m)" stroke-width="3.5" stroke-linecap="round"/><path d="M${h[0]} ${y-6}V${y}" stroke="var(--eq-m)" stroke-width="2.5"/><circle cx="${h[0]}" cy="${y}" r="4.2" fill="var(--eq-m)" stroke="var(--bg)" stroke-width="1"/>`},
+  machineback:(J,x,y1,y2)=>`<path d="M${x} ${y1}V${y2}" stroke="var(--eq-p)" stroke-width="9" stroke-linecap="round"/><path d="M${x-6} ${y2}V${FG.G}" stroke="var(--eq-m)" stroke-width="3"/>`,
+  handle:(J)=>{const h=J.arm1[1];return `<rect x="${h[0]-2.5}" y="${h[1]-8}" width="5" height="16" rx="2.5" fill="var(--eq-a)"/><path d="M${h[0]} ${h[1]-8}L${h[0]+10} ${h[1]-34}L136 -10" stroke="var(--eq-m)" stroke-width="3" fill="none" stroke-linejoin="round"/>`},
+  armpads:(J)=>[J.arm1,J.arm2].map(a=>`<path d="M${a[0][0]} ${a[0][1]}L${a[1][0]} ${a[1][1]}" stroke="var(--eq-p)" stroke-width="11" stroke-linecap="round" opacity=".9"/>`).join("")+`<path d="M30 -24V${FG.G}M130 -24V${FG.G}M30 -24H130" stroke="var(--eq-m)" stroke-width="3" opacity=".7" fill="none"/>`,
+  frontseat:(J)=>`<rect x="58" y="90" width="44" height="8" rx="3" fill="var(--eq-p)" stroke="var(--eq-m)"/><rect x="62" y="34" width="36" height="56" rx="6" fill="var(--eq-p)" opacity=".55"/><path d="M80 98V${FG.G}" stroke="var(--eq-m)" stroke-width="3"/>`,
+  cables2:(J)=>{const a=J.arm1[1],b=J.arm2[1];return `<path d="M${a[0]} ${a[1]}L150 -30M${b[0]} ${b[1]}L10 -30" stroke="var(--eq-m)" stroke-width="1.6"/><circle cx="150" cy="-30" r="4.5" fill="var(--eq-m)"/><circle cx="10" cy="-30" r="4.5" fill="var(--eq-m)"/>`},
   box:(J,x,y,w)=>`<rect x="${x}" y="${y}" width="${w}" height="${FG.G-y}" rx="3" fill="var(--eq-a)" opacity=".85"/>`,
   roller:(J,x,y)=>`<circle cx="${x}" cy="${y}" r="5" fill="var(--eq-a)"/>`,
   plate:(J,x1,y1,x2,y2)=>`<path d="M${x1} ${y1}L${x2} ${y2}" stroke="var(--eq-a)" stroke-width="5" stroke-linecap="round"/>`,
@@ -1022,18 +1027,21 @@ const PAT={
   press_banca:{pr:BENCH,a:{...SUPB,e:[48,94],h:[52,72]},b:{...SUPB,e:[52,62],h:[52,40]},ia:[["bar"]],ib:[["bar"]]},
   press_mancuernas:{pr:BENCH,a:{...SUPB,e:[46,96],h:[50,74]},b:{...SUPB,e:[52,62],h:[52,40]},ia:[["db"]],ib:[["db"]]},
   press_inclinado:{pr:[["pad",32,50,86,100]],a:{p:[90,90],s:[59,59],k:[118,92],f:[120,128],k2:[115,93],f2:[116,128],e:[50,80],h:[62,58],face:1},b:{p:[90,90],s:[59,59],k:[118,92],f:[120,128],k2:[115,93],f2:[116,128],e:[60,37],h:[61,15],face:1},ia:[["bar"]],ib:[["bar"]]},
+  contractora:{pr:[["frontseat"]],a:{front:true,p:[80,88],s:[80,44],e:[118,46],h:[120,22],e2:[42,46],h2:[40,22],k:[94,100],f:[96,128],k2:[66,100],f2:[64,128]},b:{front:true,p:[80,88],s:[80,44],e:[100,52],h:[86,28],e2:[60,52],h2:[74,28],k:[94,100],f:[96,128],k2:[66,100],f2:[64,128]},ia:[["armpads"]],ib:[["armpads"]]},
+  press_maquina:{pr:[["bench",56,96,96],["machineback",58,40,92]],a:{...SEAT(72),s:[72,45],e:[60,62],h:[84,56],face:1},b:{...SEAT(72),s:[72,45],e:[96,52],h:[118,54],face:1},ia:[["handle"]],ib:[["handle"]]},
+  cruce:{a:{front:true,p:[80,66],s:[80,22],e:[112,6],h:[130,-12],e2:[48,6],h2:[30,-12],k:[85,97],f:[88,128],k2:[75,97],f2:[72,128]},b:{front:true,p:[80,66],s:[80,22],e:[100,46],h:[85,62],e2:[60,46],h2:[75,62],k:[85,97],f:[88,128],k2:[75,97],f2:[72,128]},ia:[["cables2"]],ib:[["cables2"]]},
   aperturas:{pr:BENCH,a:{...SUPB,e:[46,100],h:[52,90]},b:{...SUPB,e:[52,62],h:[52,40]},ia:[["db"]],ib:[["db"]]},
   pullover:{pr:BENCH,a:{...SUPB,e:[30,84],h:[8,86]},b:{...SUPB,e:[52,62],h:[52,40]},ia:[["db"]],ib:[["db"]]},
   press_frances:{pr:BENCH,a:{...SUPB,e:[52,62],h:[38,72]},b:{...SUPB,e:[52,62],h:[52,40]},ia:[["bar"]],ib:[["bar"]]},
   flexion:{a:{p:[84,101],s:[124,82],k:[57,114],f:[30,124],fd:65,e:[124,105],h:[124,128],face:1},b:{p:[91,117],s:[134,110],k:[60,121],f:[30,124],fd:65,e:[112,108],h:[124,128],face:1}},
   fondos:{pr:[["par",60]],a:{p:[80,60],s:[80,16],e:[81,38],h:[82,60],k:[79,90],f:[66,104],fd:150},b:{p:[76,82],s:[84,38],e:[64,48],h:[82,60],k:[74,112],f:[60,124],fd:150}},
   fondos_banco:{pr:[["bench",20,70,92]],a:{p:[74,88],s:[72,44],e:[69,67],h:[66,90],k:[103,104],f:[132,124],fd:-70,face:1},b:{p:[78,110],s:[74,66],e:[54,74],h:[66,90],k:[104,114],f:[132,124],fd:-70,face:1}},
-  dominada:{pr:[["pullbar",-20]],a:{p:[80,68],s:[80,24],e:[81,2],h:[82,-20],k:[82,98],f:[70,120],fd:120},b:{p:[80,38],s:[80,-6],e:[100,-1],h:[82,-20],k:[86,68],f:[70,90],fd:120,look:-80}},
+  dominada:{pr:[["pullbar",-50]],a:{p:[80,38],s:[80,-6],e:[81,-28],h:[82,-50],k:[82,68],f:[72,96],fd:110},b:{p:[80,8],s:[80,-36],e:[100,-31],h:[82,-50],k:[86,38],f:[72,62],fd:110}},
   jalon:{pr:[["bench",56,104,96]],a:{p:[78,88],s:[72,45],e:[73,22],h:[74,0],k:[108,90],f:[110,128]},b:{p:[78,88],s:[72,45],e:[70,67],h:[88,50],k:[108,90],f:[110,128]},ia:[["cable",74,-30]],ib:[["cable",88,-30]]},
   remo_polea:{pr:[["bench",30,86,98],["plate",122,96,122,128]],a:{p:[58,90],s:[86,54],e:[106,64],h:[124,72],k:[88,84],f:[116,108],fd:-70,face:1},b:{p:[58,90],s:[54,47],e:[44,70],h:[66,80],k:[88,84],f:[116,108],fd:-70,face:1},ia:[["cable",158,100]],ib:[["cable",158,100]]},
   remo_inclinado:{a:{...HINGE,e:[105,84],h:[104,106]},b:{...HINGE,e:[82,64],h:[86,84]},ia:[["bar"]],ib:[["bar"]]},
   remo_mancuerna:{pr:[["bench",112,152,92]],a:{p:[66,76],s:[108,62],k:[86,100],f:[84,128],k2:[60,100],f2:[54,128],e:[106,84],h:[104,106],e2:[118,78],h2:[124,92]},b:{p:[66,76],s:[108,62],k:[86,100],f:[84,128],k2:[60,100],f2:[54,128],e:[84,58],h:[90,80],e2:[118,78],h2:[124,92]},ia:[["db"]],ib:[["db"]]},
-  remo_invertido:{pr:[["pullbar",60]],a:{p:[72,108],s:[114,96],k:[46,117],f:[20,126],fd:-90,e:[115,78],h:[116,60],face:-1},b:{p:[73,95],s:[112,72],k:[47,110],f:[20,126],fd:-90,e:[98,76],h:[116,60],face:-1}},
+  remo_invertido:{pr:[["pullbar",60,1]],a:{p:[72,108],s:[114,96],k:[46,117],f:[20,126],fd:-90,e:[115,78],h:[116,60],face:-1},b:{p:[73,95],s:[112,72],k:[47,110],f:[20,126],fd:-90,e:[98,76],h:[116,60],face:-1}},
   peso_muerto:{a:{p:[64,84],s:[104,64],k:[96,104],f:[86,128],k2:[93,104],f2:[82,128],e:[103,88],h:[102,110]},b:{...STD(),...A_DOWN},ia:[["bar"]],ib:[["bar"]]},
   rumano:{a:{...STD(),...A_DOWN},b:{p:[62,72],s:[104,58],k:[90,98],f:[86,128],k2:[87,98],f2:[82,128],e:[102,82],h:[100,104]},ia:[["bar"]],ib:[["bar"]]},
   buenos_dias:{a:{...STD(),e:[68,40],h:[74,22]},b:{p:[64,72],s:[106,60],k:[90,98],f:[86,128],k2:[87,98],f2:[82,128],e:[94,74],h:[100,58]},ia:[["bar",[72,20]]],ib:[["bar",[102,54]]]},
@@ -1054,7 +1062,7 @@ const PAT={
   triceps_nuca:{pr:[["bench",56,100,96]],a:{...SEAT(80),s:[80,44],e:[82,20],h:[66,32]},b:{...SEAT(80),s:[80,44],e:[82,20],h:[84,-2]},ia:[["db"]],ib:[["db"]]},
   patada_triceps:{pr:[["bench",112,152,92]],a:{p:[64,76],s:[106,66],k:[74,100],f:[70,128],k2:[52,100],f2:[46,128],e:[84,72],h:[86,94],e2:[114,80],h2:[120,92]},b:{p:[64,76],s:[106,66],k:[74,100],f:[70,128],k2:[52,100],f2:[46,128],e:[84,72],h:[62,72],e2:[114,80],h2:[120,92]},ia:[["db"]],ib:[["db"]]},
   muneca:{pr:[["bench",50,96,96]],a:{...SEAT(70),s:[68,45],e:[84,82],h:[104,84]},b:{...SEAT(70),s:[68,45],e:[84,82],h:[104,76]},ia:[["db"]],ib:[["db"]]},
-  colgado:{pr:[["pullbar",-20]],a:{p:[80,68],s:[80,24],e:[81,2],h:[82,-20],k:[82,98],f:[78,124],fd:80}},
+  colgado:{pr:[["pullbar",-50]],a:{p:[80,38],s:[80,-6],e:[81,-28],h:[82,-50],k:[82,68],f:[78,96],fd:80}},
   sentadilla:{a:{...STD(),e:[68,40],h:[74,22]},b:{p:[74,102],s:[96,64],k:[106,104],f:[84,128],k2:[103,105],f2:[80,128],e:[84,78],h:[92,62]},ia:[["bar",[72,20]]],ib:[["bar",[90,58]]]},
   goblet:{a:{...STD(),e:[82,44],h:[92,34]},b:{p:[74,102],s:[94,63],k:[106,104],f:[84,128],k2:[103,105],f2:[80,128],e:[100,86],h:[104,68]},ia:[["db"]],ib:[["db"]]},
   prensa:{pr:[["pad",12,58,46,104]],a:{p:[52,100],s:[22,66],k:[64,70],f:[92,64],fd:-50,k2:[61,71],f2:[89,65],e:[38,80],h:[48,100],face:1},b:{p:[52,100],s:[22,66],k:[76,80],f:[100,60],fd:-50,k2:[73,81],f2:[97,61],e:[38,80],h:[48,100],face:1},ia:[["plate",82,52,102,76]],ib:[["plate",89,48,110,72]]},
@@ -1074,7 +1082,7 @@ const PAT={
   plancha:{a:{p:[64,104],s:[106,90],k:[40,114],f:[16,124],fd:65,e:[106,124],h:[128,126],face:1}},
   plancha_lateral:{a:{p:[64,104],s:[106,90],k:[40,114],f:[16,124],fd:65,e:[106,124],h:[128,126],e2:[90,96],h2:[70,100],face:1}},
   crunch:{a:{...SUPF(),e:[52,106],h:[30,114]},b:{...SUPF(),s:[44,100],e:[56,84],h:[34,92]}},
-  elev_colgado:{pr:[["pullbar",-20]],a:{p:[80,68],s:[80,24],e:[81,2],h:[82,-20],k:[82,98],f:[80,128],fd:80},b:{p:[80,68],s:[80,24],e:[81,2],h:[82,-20],k:[112,68],f:[142,68],fd:-90}},
+  elev_colgado:{pr:[["pullbar",-50]],a:{p:[80,38],s:[80,-6],e:[81,-28],h:[82,-50],k:[82,68],f:[80,98],fd:80},b:{p:[80,38],s:[80,-6],e:[81,-28],h:[82,-50],k:[112,38],f:[142,38],fd:-90}},
   elev_tumbado:{a:{...SUPF(false),e:[48,128],h:[66,128]},b:{...SUPF(false),k:[82,90],f:[84,60],fd:-10,e:[48,128],h:[66,128]}},
   rueda:{a:{p:[52,96],s:[88,70],k:[40,124],f:[14,126],fd:180,e:[93,94],h:[96,118],face:1},b:{p:[68,108],s:[110,100],k:[40,124],f:[14,126],fd:180,e:[128,106],h:[148,116],face:1},ia:[["wheel"]],ib:[["wheel"]]},
   russian:{a:{p:[72,120],s:[52,82],k:[96,96],f:[118,110],fd:-20,e:[64,98],h:[84,92],face:1},b:{p:[72,120],s:[52,82],k:[96,96],f:[118,110],fd:-20,e:[60,104],h:[76,112],face:1},ia:[["ball"]],ib:[["ball"]]},
@@ -1103,8 +1111,8 @@ const PAT={
 const EX_FIG={
 "Press de banca con barra":"press_banca","Press declinado con barra":"press_banca","Press de banca agarre estrecho":"press_banca",
 "Press inclinado con barra":"press_inclinado","Press inclinado con mancuernas":"press_inclinado",
-"Press plano con mancuernas":"press_mancuernas","Press en máquina de pecho":"press_mancuernas","Press Svend":"frontal",
-"Aperturas con mancuernas":"aperturas","Aperturas en máquina (contractora)":"aperturas","Cruce de poleas":"aperturas",
+"Press plano con mancuernas":"press_mancuernas","Press en máquina de pecho":"press_maquina","Press Svend":"frontal",
+"Aperturas con mancuernas":"aperturas","Aperturas en máquina (contractora)":"contractora","Cruce de poleas":"cruce",
 "Flexiones":"flexion","Flexiones diamante":"flexion","Fondos en paralelas para pecho":"fondos","Fondos de tríceps en paralelas":"fondos","Fondos de tríceps en banco":"fondos_banco",
 "Pullover con mancuerna":"pullover","Pull over tumbado":"pullover","Pull over en polea":"triceps_polea",
 "Dominadas":"dominada","Dominadas supinas (chin-ups)":"dominada","Jalón al pecho":"jalon","Jalón con agarre estrecho":"jalon",
@@ -1112,7 +1120,7 @@ const EX_FIG={
 "Peso muerto":"peso_muerto","Peso muerto sumo":"peso_muerto","Peso muerto rumano":"rumano","Peso muerto con piernas rígidas":"rumano","Buenos días":"buenos_dias",
 "Hiperextensiones lumbares":"hiperext","Encogimientos de hombros":"encogimiento","Face pull":"face_pull",
 "Press militar con barra":"press_militar","Press de hombro con mancuernas":"press_hombro_db","Press Arnold":"press_hombro_db","Press de hombro en máquina":"press_hombro_db",
-"Elevaciones laterales":"lateral","Elevaciones laterales en polea":"lateral","Elevaciones frontales":"frontal","Pájaros (hombro posterior)":"pajaros","Contractora inversa (hombro posterior)":"pajaros","Remo al mentón":"remo_menton","Rotación externa con polea":"rotacion",
+"Elevaciones laterales":"lateral","Elevaciones laterales en polea":"lateral","Elevaciones frontales":"frontal","Pájaros (hombro posterior)":"pajaros","Contractora inversa (hombro posterior)":"contractora","Remo al mentón":"remo_menton","Rotación externa con polea":"rotacion",
 "Curl de bíceps con barra":"curl_barra","Curl de bíceps con mancuernas":"curl","Curl martillo":"curl","Curl en polea":"curl","Curl inclinado con mancuernas":"curl","Curl concentrado":"curl_scott","Curl predicador (banco Scott)":"curl_scott","Curl araña":"curl_scott","Curl invertido":"curl_barra",
 "Extensión de tríceps en polea":"triceps_polea","Press francés":"press_frances","Extensión de tríceps por encima de la cabeza":"triceps_nuca","Patada de tríceps":"patada_triceps",
 "Curl de muñeca":"muneca","Curl de muñeca invertido":"muneca","Colgarse de la barra":"colgado",
@@ -1129,7 +1137,9 @@ const EX_FIG={
 };
 function figBox(poses,props){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;const add=(x,y,m)=>{x0=Math.min(x0,x-m);y0=Math.min(y0,y-m);x1=Math.max(x1,x+m);y1=Math.max(y1,y+m)};
   for(const o of poses){if(!o)continue;const J=joints(o);[J.p,J.s,J.S1,J.S2,J.H1,J.H2,...J.arm1,...J.arm2,...J.leg1,...J.leg2].forEach(p=>add(p[0],p[1],12));const hc=[J.s[0]+J.td[0]*14,J.s[1]+J.td[1]*14];add(hc[0],hc[1],12)}
-  for(const pr of props){const n=pr.slice(1).filter(v=>typeof v==="number");for(let i=0;i+1<n.length;i+=2)add(n[i],n[i+1],6)}
+  for(const pr of props){if(pr[0]==="pullbar"){const J=joints(poses[0]);const hx=J.arm1[1][0];add(hx,pr[1]-12,4);add(hx+(pr[2]||-1)*40,pr[1],8);continue}
+    if(pr[0]==="armpads"||pr[0]==="cables2"){add(30,-34,0);add(130,-34,0);continue}
+    const n=pr.slice(1).filter(v=>typeof v==="number");for(let i=0;i+1<n.length;i+=2)add(n[i],n[i+1],6)}
   add(x0+12,FG.G+4,0);const w=x1-x0,h=y1-y0;const W=Math.max(w,h*1.15),H=W/1.15;const cx=(x0+x1)/2,cy=(y0+y1)/2;return [cx-W/2,cy-H/2,W,H]}
 function poseSVG(o,props,box){const f=figure(o);const [vx,vy,vw,vh]=box;return `<svg viewBox="${vx.toFixed(1)} ${vy.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}" class="fig" role="img"><path d="M${(vx).toFixed(1)} ${FG.G+1}H${(vx+vw).toFixed(1)}" stroke="var(--eq-m)" stroke-width="1.5" opacity=".4"/>${propsSVG(props,f.J)}${f.svg}</svg>`}
 function figHTML(name){
