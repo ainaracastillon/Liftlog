@@ -404,7 +404,10 @@ body.haslive main{padding-top:58px}
 .modal{position:fixed;inset:0;z-index:60;background:rgba(10,20,16,.55);display:flex;align-items:flex-end;justify-content:center;animation:fadein .18s ease}
 .sheet{background:var(--surface);width:100%;max-width:560px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;border-radius:20px 20px 0 0;padding:10px max(18px,env(safe-area-inset-left,0px)) calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.25);animation:sheetup .22s cubic-bezier(.2,.8,.2,1)}
 .sheet .grab{display:block;width:40px;height:5px;border-radius:99px;background:var(--line);margin:0 auto 10px}
-body.modal-open{overflow:hidden}
+body.modal-open,body.modal-open main{overflow:hidden!important;touch-action:none}
+.modal,.pview{overscroll-behavior:contain}
+.sheet,.pview figure{touch-action:pan-y}
+.pview{z-index:60}
 @keyframes fadein{from{opacity:0}}
 @keyframes sheetup{from{transform:translateY(40px);opacity:.4}}
 @media (min-width:640px){.modal{align-items:center;padding:24px}.sheet{border-radius:20px;padding:18px 22px 22px;max-height:84vh;box-shadow:0 20px 60px rgba(0,0,0,.3);animation-name:popin}.sheet .grab{display:none}}
@@ -797,7 +800,7 @@ document.addEventListener("click",e=>{
     case"calday":ui.calSel=b.dataset.d;ui.durEdit=null;render();document.body.classList.add("modal-open");setTimeout(()=>document.querySelector(".sheet .del")?.focus(),30);return;
     case"calclose":if(e.target.closest(".sheet")&&!e.target.closest('[data-act="calclose"].del'))return;ui.calSel=null;ui.durEdit=null;document.body.classList.remove("modal-open");break;
     case"duredit":ui.durEdit=b.dataset.d;render();{const i=document.getElementById("durmin");if(i){i.focus();i.select()}}return;
-    case"goday":ui.date=b.dataset.d;ui.tab="entreno";ui.confirm=null;ui.notesOpen=null;selDay=null;toTop();break;
+    case"goday":ui.calSel=null;ui.durEdit=null;ui.date=b.dataset.d;ui.tab="entreno";ui.confirm=null;ui.notesOpen=null;selDay=null;toTop();break;
     case"dplus":if(S.routine.days.length<7){const nd={id:uid(),name:"Día "+(S.routine.days.length+1),wd:[],ex:[]};S.routine.days.push(nd);persist("routine");ui.rutDay=nd.id;ui.tab="rutina";toTop()}else toast("Máximo 7 días");break;
     case"rutopen":ui.rutDay=id;ui.confirm=null;toTop();break;
     case"rutback":ui.rutDay=null;ui.confirm=null;toTop();break;
@@ -1911,6 +1914,20 @@ document.addEventListener("submit",e=>{if(e.target.id!=="durform")return;e.preve
 
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ui.calSel){ui.calSel=null;ui.durEdit=null;document.body.classList.remove("modal-open");render()}});
 const _render2=render;render=function(){_render2();if(!ui.calSel||ui.tab!=="calendario")document.body.classList.remove("modal-open")};
+/* ===== popups: la página de detrás queda bloqueada ===== */
+function syncOverlay(){
+  let root=document.getElementById("ovroot");if(!root){root=document.createElement("div");root.id="ovroot";document.body.appendChild(root)}
+  root.innerHTML="";document.querySelectorAll("#view .modal, #view .pview").forEach(p=>root.appendChild(p));
+  const open=root.children.length>0;
+  ["header.top","main","nav.tabs","#livebar","#restbar"].forEach(s=>{const el=document.querySelector(s);if(!el)return;el.inert=open;if(open)el.setAttribute("aria-hidden","true");else el.removeAttribute("aria-hidden")});
+  document.body.classList.toggle("modal-open",open);
+  if(open&&!root.contains(document.activeElement)){const f=root.querySelector("button,[href],input,select,textarea");if(f)f.focus({preventScroll:true})}
+}
+const _render3=render;render=function(){_render3();syncOverlay()};
+const _restUpdate0=restUpdate;restUpdate=function(){_restUpdate0();const rb=document.getElementById("restbar"),open=document.body.classList.contains("modal-open");if(rb){rb.inert=open}};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ui.photo){ui.photo=null;ui.photoDel=false;render()}});
+document.addEventListener("touchmove",e=>{if(document.body.classList.contains("modal-open")&&!e.target.closest(".sheet,.pview figure"))e.preventDefault()},{passive:false});
+
 render();
 
 /* ---------- guardado en la cuenta ---------- */
