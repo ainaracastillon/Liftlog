@@ -1940,8 +1940,12 @@ function parseRest(v){v=String(v||"").trim().replace(",",".").replace(/\s*(min|m
   let s;if(/^\d{1,2}:\d{1,2}$/.test(v)){const [a,b]=v.split(":").map(Number);if(b>59)return null;s=a*60+b}else if(/^\d+(\.\d+)?$/.test(v)){const n=parseFloat(v);s=n<=15?Math.round(n*60):Math.round(n)}else return null;
   return s>0&&s<=1800?s:null}
 function restField(id,compact){const v=S.settings.autoRest&&S.settings.rest?mmss(S.settings.rest):"";
-  return `<label class="restsel ${compact?"compact":""}"><span class="hint">Descanso</span><input class="txt restin" id="${id}" inputmode="decimal" value="${v}" placeholder="Sin aviso" list="restopts" autocomplete="off" aria-label="Tiempo de descanso, por ejemplo 1:30"></label><datalist id="restopts"><option value="0:45"><option value="1:00"><option value="1:30"><option value="2:00"><option value="2:30"><option value="3:00"><option value="4:00"></datalist>`}
+  return `<label class="restsel ${compact?"compact":""}"><span class="hint">Descanso</span><input class="txt restin" id="${id}" type="text" inputmode="text" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="5" value="${v}" placeholder="Sin aviso" list="restopts" autocomplete="off" aria-label="Tiempo de descanso, por ejemplo 1:30"></label><datalist id="restopts"><option value="0:45"><option value="1:00"><option value="1:30"><option value="2:00"><option value="2:30"><option value="3:00"><option value="4:00"></datalist>`}
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="restsec"||e.target.id==="restsec2")){e.preventDefault();e.target.blur()}});
+document.addEventListener("input",e=>{const el=e.target;if(el.id!=="restsec"&&el.id!=="restsec2")return;
+  let v=el.value.replace(/[.,;'h]/g,":").replace(/[^\d:]/g,"");const parts=v.split(":");if(parts.length>2)v=parts[0]+":"+parts.slice(1).join("");
+  if(/^\d{3,4}$/.test(v))v=v.slice(0,-2)+":"+v.slice(-2);
+  if(v!==el.value){el.value=v;try{el.setSelectionRange(v.length,v.length)}catch(_){}}});
 document.addEventListener("focusin",e=>{if(e.target.id==="restsec"||e.target.id==="restsec2")setTimeout(()=>e.target.select(),0)});
 
 render();
