@@ -633,20 +633,36 @@ function durOf(L){if(!L)return null;if(L.duration)return{s:L.duration,est:!!L.du
   return{s:n*150,est:true}}
 const fmtDur=s=>{s=Math.round(s||0);if(s<60)return s+" s";const m=Math.round(s/60);return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")};
 const fmtDurShort=s=>{const m=Math.max(1,Math.round((s||0)/60));return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")};
+function vDayEdit(ds){
+  const L=S.logs[ds];const dayId=(L&&dayById(L.dayId)&&L.dayId)||ui.calEditDay||(plannedFor(ds)||S.routine.days[0]||{}).id;const day=dayById(dayId);
+  let h=`<div class="ds-h"><div><span class="eyebrow">Editando · ${DIA[parseD(ds).getDay()]}</span><b>${parseD(ds).getDate()} de ${MES[parseD(ds).getMonth()]}</b></div><button class="del" data-act="calclose" aria-label="Cerrar">${ICON.x}</button></div>`;
+  if(!S.routine.days.length)return h+`<p class="hint">Primero crea tu rutina.</p>`;
+  if(!L||!Object.keys(L.entries||{}).length)h+=`<label class="lab" style="margin-top:10px">Rutina que hiciste<select class="sel" id="pdday">${S.routine.days.map(d=>`<option value="${d.id}" ${d.id===dayId?"selected":""}>${esc(d.name)}</option>`).join("")}</select></label>`;
+  else h+=`<div class="ds-rut">${esc(L.dayName||(day&&day.name)||"Entreno")}</div>`;
+  const ids=[];if(day)day.ex.forEach(x=>ids.push(x.id));if(L)Object.keys(L.entries||{}).forEach(k=>{if(!ids.includes(k))ids.push(k)});
+  const idx=exIndex();
+  h+=`<div class="ds-list">${ids.map(id=>{const nm=(L&&L.entries[id]&&L.entries[id].name)||(idx[id]||{}).name||"Ejercicio";const sets=(L&&L.entries[id]&&L.entries[id].sets.length)?L.entries[id].sets:[{w:"",r:""}];
+    return `<div class="ds-ex"><b style="font-weight:600;font-size:14.5px">${esc(nm)}</b><div class="sets">${sets.map((s,i)=>`<div class="setrow"><span class="no">${i+1}</span><label class="field"><input inputmode="decimal" data-pd="${ds}" data-pday="${dayId}" data-pex="${id}" data-pi="${i}" data-pk="w" value="${s.w===""||s.w==null?"":fmtKg(num(s.w))}" placeholder="0" aria-label="Peso serie ${i+1}"><span>kg</span></label><span class="x">×</span><label class="field"><input inputmode="numeric" data-pd="${ds}" data-pday="${dayId}" data-pex="${id}" data-pi="${i}" data-pk="r" value="${s.r??""}" placeholder="0" aria-label="Repeticiones serie ${i+1}"><span>reps</span></label><button class="del" data-act="pddel" data-d="${ds}" data-id="${id}" data-i="${i}" aria-label="Quitar serie">${ICON.x}</button></div>`).join("")}</div><button class="btn small" style="margin-top:6px" data-act="pdadd" data-d="${ds}" data-day="${dayId}" data-id="${id}">+ Serie</button></div>`}).join("")}</div>`;
+  h+=`<button class="btn primary" style="width:100%;margin-top:14px" data-act="pddone" data-d="${ds}">Listo</button>`;
+  return h;
+}
+function pastLog(ds,dayId){let L=S.logs[ds];const d=dayById(dayId);if(!L){L={date:ds,dayId,dayName:d?d.name:"Entreno",entries:{}};S.logs[ds]=L}return L}
+function pastEntry(L,id){if(!L.entries[id]){const nm=(exIndex()[id]||{}).name||"Ejercicio";L.entries[id]={name:nm,sets:[]}}return L.entries[id]}
 function vDaySum(ds){
+  if(ui.calEdit===ds)return `<div class="card daysum" id="daysum">${vDayEdit(ds)}</div>`;
   const L=S.logs[ds];const live=ui.focus&&!ui.focus.done&&ui.focus.date===ds;
   const done=L&&Object.keys(L.entries||{}).some(k=>validSets(L.entries[k].sets).length);
   let h=`<div class="card daysum" id="daysum"><div class="ds-h"><div><span class="eyebrow">${ds===TODAY?"Hoy":ds===addDays(TODAY,-1)?"Ayer":DIA[parseD(ds).getDay()]}</span><b>${parseD(ds).getDate()} de ${MES[parseD(ds).getMonth()]}</b></div><button class="del" data-act="calclose" aria-label="Cerrar resumen">${ICON.x}</button></div>`;
   if(live){const d=dayById(ui.focus.dayId);return h+`<p style="margin:10px 0"><b>${esc(d?d.name:"Entreno")}</b> · en curso desde hace ${mmss((Date.now()-ui.focus.start)/1000)}</p><button class="btn primary" style="width:100%" data-act="golive">Volver al entreno</button></div>`}
   if(!done){const pl=plannedFor(ds);
-    return h+`<p class="hint" style="margin:10px 0 12px">${ds>TODAY?(pl?`Este día toca <b style="color:var(--accent)">${esc(pl.name)}</b>.`:"Día de descanso según tu semana."):"No apuntaste entreno este día."}</p>${ds<=TODAY?`<button class="btn" style="width:100%" data-act="goday" data-d="${ds}">Apuntar entreno de este día</button>`:""}</div>`}
+    return h+`<p class="hint" style="margin:10px 0 12px">${ds>TODAY?(pl?`Este día toca <b style="color:var(--accent)">${esc(pl.name)}</b>.`:"Día de descanso según tu semana."):"No apuntaste entreno este día."}</p>${ds<=TODAY?`<button class="btn" style="width:100%" data-act="${ds===TODAY?"goday":"caledit"}" data-d="${ds}">${ds===TODAY?"Ir a entrenar":"Apuntar entreno de este día"}</button>`:""}</div>`}
   let sets=0,vol=0,prs=0;const ex=[];
   for(const id in L.entries){const e=L.entries[id];const vs=validSets(e.sets);if(!vs.length)continue;sets+=vs.length;vs.forEach(s=>vol+=num(s.w)*num(s.r));const b=compare(id,ds,vs);if(b.some(x=>x[0]==="pr"))prs++;ex.push({id,name:e.name||(exIndex()[id]||{}).name||"Ejercicio",vs,b})}
   h+=`<div class="ds-rut">${esc(L.dayName||"Entreno")}</div>`;
   h+=`<div class="ds-kpis"><div>${ui.durEdit===ds?`<form id="durform" class="durform" data-d="${ds}" novalidate><input class="txt" id="durmin" inputmode="numeric" value="${Math.round((durOf(L)||{s:0}).s/60)}" aria-label="Minutos"><span>min</span><button class="btn small primary" type="submit">OK</button></form>`:`<b>${fmtDur(durOf(L).s)}</b><span>${durOf(L).est?"aprox. · ":""}duración <button class="linkbtn" data-act="duredit" data-d="${ds}">Editar</button></span>`}</div><div><b>${ex.length}</b><span>ejercicios</span></div><div><b>${sets}</b><span>series</span></div><div><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+" t":fmtN(vol)+" kg"}</b><span>levantados</span></div></div>`;
   if(prs)h+=`<p class="ds-pr">${prs} récord${prs===1?"":"s"} personal${prs===1?"":"es"} este día</p>`;
   h+=`<div class="ds-list">${ex.map(x=>`<div class="ds-ex"><div class="ds-exh"><b>${esc(x.name)}</b><span class="ds-b">${x.b.slice(0,1).map(([c,tx])=>`<span class="badge ${c}">${tx}</span>`).join("")}</span></div><div class="ds-sets">${x.vs.map((s,i)=>`<span class="set-pill">${fmtKg(num(s.w))}<em>(${num(s.r)})</em></span>`).join("")}</div></div>`).join("")}</div>`;
-  h+=`<button class="btn" style="width:100%;margin-top:12px" data-act="goday" data-d="${ds}">Editar este entreno</button></div>`;
+  h+=`<button class="btn" style="width:100%;margin-top:12px" data-act="${ds===TODAY?"goday":"caledit"}" data-d="${ds}">${ds===TODAY?"Ir a Entreno":"Editar este entreno"}</button></div>`;
   return h;
 }
 function vCal(){
@@ -790,8 +806,7 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b)return;
   const a=b.dataset.act,id=b.dataset.id;
   switch(a){
-    case"dprev":ui.date=addDays(ui.date,-1);ui.confirm=null;ui.notesOpen=null;break;
-    case"dnext":ui.date=addDays(ui.date,1);ui.confirm=null;ui.notesOpen=null;break;
+    case"dprev":case"dnext":return;
     case"pickday":selDay=id;ui._lastDate=ui.date;break;
     case"notes":ui.notesOpen=ui.notesOpen===id?null:id;render();if(ui.notesOpen){const ta=document.getElementById("nt-"+id);ta&&ta.focus()}return;
     case"addset":{const sets=getSets(id);const last=sets[sets.length-1];sets.push({w:last&&last.w!==""?last.w:"",r:""});persist("log-"+ui.date);render();const i=sets.length-1;const el=document.getElementById("r-"+id+"-"+i);el&&el.focus();return}
@@ -1940,13 +1955,27 @@ function parseRest(v){v=String(v||"").trim().replace(",",".").replace(/\s*(min|m
   let s;if(/^\d{1,2}:\d{1,2}$/.test(v)){const [a,b]=v.split(":").map(Number);if(b>59)return null;s=a*60+b}else if(/^\d+(\.\d+)?$/.test(v)){const n=parseFloat(v);s=n<=15?Math.round(n*60):Math.round(n)}else return null;
   return s>0&&s<=1800?s:null}
 function restField(id,compact){const v=S.settings.autoRest&&S.settings.rest?mmss(S.settings.rest):"";
-  return `<label class="restsel ${compact?"compact":""}"><span class="hint">Descanso</span><input class="txt restin" id="${id}" type="text" inputmode="text" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="5" value="${v}" placeholder="Sin aviso" list="restopts" autocomplete="off" aria-label="Tiempo de descanso, por ejemplo 1:30"></label><datalist id="restopts"><option value="0:45"><option value="1:00"><option value="1:30"><option value="2:00"><option value="2:30"><option value="3:00"><option value="4:00"></datalist>`}
+  return `<label class="restsel ${compact?"compact":""}"><span class="hint">Descanso</span><input class="txt restin" id="${id}" type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" maxlength="5" value="${v}" placeholder="1:30" list="restopts" aria-label="Tiempo de descanso, por ejemplo 1:30"></label><datalist id="restopts"><option value="0:45"><option value="1:00"><option value="1:30"><option value="2:00"><option value="2:30"><option value="3:00"><option value="4:00"></datalist>`}
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="restsec"||e.target.id==="restsec2")){e.preventDefault();e.target.blur()}});
 document.addEventListener("input",e=>{const el=e.target;if(el.id!=="restsec"&&el.id!=="restsec2")return;
   let v=el.value.replace(/[.,;'h]/g,":").replace(/[^\d:]/g,"");const parts=v.split(":");if(parts.length>2)v=parts[0]+":"+parts.slice(1).join("");
   if(/^\d{3,4}$/.test(v))v=v.slice(0,-2)+":"+v.slice(-2);
   if(v!==el.value){el.value=v;try{el.setSelectionRange(v.length,v.length)}catch(_){}}});
 document.addEventListener("focusin",e=>{if(e.target.id==="restsec"||e.target.id==="restsec2")setTimeout(()=>e.target.select(),0)});
+
+document.addEventListener("input",e=>{const el=e.target;if(!el.dataset||!el.dataset.pk)return;const ds=el.dataset.pd;const L=pastLog(ds,el.dataset.pday);const en=pastEntry(L,el.dataset.pex);const i=+el.dataset.pi;
+  while(en.sets.length<=i)en.sets.push({w:"",r:""});
+  en.sets[i][el.dataset.pk]=el.dataset.pk==="w"?(num(el.value)??""):(el.value.replace(/\D/g,"")===""?"":+el.value.replace(/\D/g,""));persist("log-"+ds)});
+document.addEventListener("change",e=>{if(e.target.id==="pdday"){ui.calEditDay=e.target.value;const L=S.logs[ui.calEdit];if(L&&!Object.keys(L.entries||{}).length)delete S.logs[ui.calEdit];render()}});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act,ds=b.dataset.d;
+  if(a==="caledit"){ui.calEdit=ds;ui.calEditDay=null;render();return}
+  if(a==="pdadd"){const L=pastLog(ds,b.dataset.day);const en=pastEntry(L,b.dataset.id);const last=en.sets[en.sets.length-1];if(!en.sets.length)en.sets.push({w:"",r:""});en.sets.push({w:last&&last.w!==""?last.w:"",r:""});render();return}
+  if(a==="pddel"){const L=S.logs[ds];if(L&&L.entries[b.dataset.id]){L.entries[b.dataset.id].sets.splice(+b.dataset.i,1);if(!L.entries[b.dataset.id].sets.length)delete L.entries[b.dataset.id];if(!Object.keys(L.entries).length)delete S.logs[ds];persist("log-"+ds)}render();return}
+  if(a==="pddone"){const L=S.logs[ds];if(L){for(const k in L.entries){L.entries[k].sets=L.entries[k].sets.filter(s=>num(s.w)!=null&&num(s.r)>0);if(!L.entries[k].sets.length)delete L.entries[k]}if(!Object.keys(L.entries).length)delete S.logs[ds];persist("log-"+ds)}ui.calEdit=null;render();toast("Entreno guardado");return}
+  if(a==="calclose"&&ui.calEdit){const L=S.logs[ui.calEdit];if(L){for(const k in L.entries){L.entries[k].sets=L.entries[k].sets.filter(s=>num(s.w)!=null&&num(s.r)>0);if(!L.entries[k].sets.length)delete L.entries[k]}if(!Object.keys(L.entries).length)delete S.logs[ui.calEdit];persist("log-"+ui.calEdit)}ui.calEdit=null}
+},true);
+const _vEntrenoToday=vEntreno;vEntreno=function(){if(!ui.focus){ui.date=TODAY}let h=_vEntrenoToday();
+  return h.replace(/<button class="iconbtn" data-act="dprev"[^>]*>[\s\S]*?<\/button>/,"").replace(/<button class="iconbtn" data-act="dnext"[^>]*>[\s\S]*?<\/button>/,"")};
 
 render();
 
