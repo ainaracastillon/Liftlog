@@ -400,7 +400,16 @@ details summary::-webkit-details-marker{display:none}
 body.haslive main{padding-top:58px}
 @media (max-width:420px){#livebar em{display:none}}
 @media (min-width:900px){#livebar{left:calc(50% + 112px)}}
-.daysum{margin-bottom:12px;border-color:var(--accent)}
+.daysum{border:0;padding:0;background:transparent;margin:0}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(10,20,16,.55);display:flex;align-items:flex-end;justify-content:center;animation:fadein .18s ease}
+.sheet{background:var(--surface);width:100%;max-width:560px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;border-radius:20px 20px 0 0;padding:10px max(18px,env(safe-area-inset-left,0px)) calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.25);animation:sheetup .22s cubic-bezier(.2,.8,.2,1)}
+.sheet .grab{display:block;width:40px;height:5px;border-radius:99px;background:var(--line);margin:0 auto 10px}
+body.modal-open{overflow:hidden}
+@keyframes fadein{from{opacity:0}}
+@keyframes sheetup{from{transform:translateY(40px);opacity:.4}}
+@media (min-width:640px){.modal{align-items:center;padding:24px}.sheet{border-radius:20px;padding:18px 22px 22px;max-height:84vh;box-shadow:0 20px 60px rgba(0,0,0,.3);animation-name:popin}.sheet .grab{display:none}}
+@keyframes popin{from{transform:scale(.96);opacity:0}}
+@media (prefers-reduced-motion:reduce){.modal,.sheet{animation:none}}
 .ds-h{display:flex;justify-content:space-between;align-items:flex-start}
 .ds-h b{display:block;font-family:var(--display);font-weight:700;font-size:26px;line-height:1.1}
 .ds-rut{font-weight:600;color:var(--accent);margin-top:2px}
@@ -646,11 +655,13 @@ function vCal(){
     const isLive=live&&live.date===ds;const pl=!done&&!isLive&&ds>=TODAY?plannedFor(ds):null;
     const DU=done?durOf(L):null;const dtag=isLive?`<span class="dur live">● en curso</span>`:DU?`<span class="dur">${DU.est?"≈ ":""}${fmtDurShort(DU.s)}</span>`:"";
     h+=`<button class="${done||isLive?"done":""} ${pl?"plan":""} ${ds===TODAY?"today":""} ${ui.calSel===ds?"sel":""}" data-act="calday" data-d="${ds}" aria-pressed="${ui.calSel===ds}" aria-label="${longDate(ds)}${done?", "+esc(L.dayName)+(DU?", "+fmtDur(DU.s):""):pl?", toca "+esc(pl.name):""}"><span class="num">${d}</span>${done?`<span class="tag">${esc(L.dayName)}</span>`:pl?`<span class="tag">${esc(pl.name)}</span>`:isLive?`<span class="tag">${esc((dayById(live.dayId)||{}).name||"")}</span>`:""}${dtag}</button>`}
-  h+=`</div></div><div class="calside">${ui.calSel&&ui.calSel.startsWith(ui.month)?vDaySum(ui.calSel):`<p class="hint calhint">Toca un día para ver el resumen del entreno.</p>`}`;
+  h+=`</div></div><div class="calside"><p class="hint calhint">Toca un día para ver el resumen del entreno.</p>`;
   h+=`<div class="stats stats4"><div class="stat"><b>${monthLogs.length}</b><span>entrenos</span></div><div class="stat"><b>${dur?fmtDur(dur):"—"}</b><span>tiempo entrenando</span></div><div class="stat"><b>${sets}</b><span>series</span></div><div class="stat"><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+"t":fmtKg(Math.round(vol))}</b><span>${vol>=1000?"tonelaje":"kg movidos"}</span></div></div>`;
   if(monthLogs.length){h+=`<div class="eyebrow" style="margin:6px 0 8px">Sesiones del mes</div><div class="card hist">${monthLogs.slice().reverse().map(d=>{const L=S.logs[d];const ups=Object.keys(L.entries).map(k=>compare(k,d,L.entries[k].sets)[0]).filter(Boolean);const nu=ups.filter(b=>b[0]==="up"||b[0]==="pr").length,ndn=ups.filter(b=>b[0]==="down").length;return`<button class="h ${ui.calSel===d?"hsel":""}" data-act="calday" data-d="${d}" style="background:none;border:0;border-top:1px solid var(--line);text-align:left;width:100%"><span class="dt">${shortDate(d)}</span><span><b style="font-weight:600">${esc(L.dayName)}</b><br><span class="hint">${Object.keys(L.entries).length} ejercicios${durOf(L)?" · "+(durOf(L).est?"≈ ":"")+fmtDur(durOf(L).s):""}</span></span><span style="display:flex;gap:4px">${nu?`<span class="badge up">↑ ${nu}</span>`:""}${ndn?`<span class="badge down">↓ ${ndn}</span>`:""}</span></button>`}).join("")}</div>`}
   else h+=`<div class="card empty">Sin entrenos apuntados este mes.<br>Toca un día para registrarlo.</div>`;
-  return h+`</div></div>`;
+  h+=`</div></div>`;
+  if(ui.calSel)h+=`<div class="modal" data-act="calclose" role="presentation"><div class="sheet" role="dialog" aria-modal="true" aria-label="Resumen del entreno"><span class="grab" aria-hidden="true"></span>${vDaySum(ui.calSel)}</div></div>`;
+  return h;
 }
 
 const WD=[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]];
@@ -783,8 +794,8 @@ document.addEventListener("click",e=>{
     case"clearyes":delete S.logs[ui.date];persist("log-"+ui.date);ui.confirm=null;toast("Registro borrado");break;
     case"clearno":ui.confirm=null;break;
     case"mprev":case"mnext":{const[y,m]=ui.month.split("-").map(Number);const d=new Date(y,m-1+(a==="mnext"?1:-1),1);ui.month=d.getFullYear()+"-"+pad(d.getMonth()+1);break}
-    case"calday":ui.calSel=ui.calSel===b.dataset.d?null:b.dataset.d;render();{const el=document.getElementById("daysum");if(el&&window.matchMedia&&!matchMedia("(min-width:900px)").matches)el.scrollIntoView({behavior:"smooth",block:"start"})}return;
-    case"calclose":ui.calSel=null;break;
+    case"calday":ui.calSel=b.dataset.d;ui.durEdit=null;render();document.body.classList.add("modal-open");setTimeout(()=>document.querySelector(".sheet .del")?.focus(),30);return;
+    case"calclose":if(e.target.closest(".sheet")&&!e.target.closest('[data-act="calclose"].del'))return;ui.calSel=null;ui.durEdit=null;document.body.classList.remove("modal-open");break;
     case"duredit":ui.durEdit=b.dataset.d;render();{const i=document.getElementById("durmin");if(i){i.focus();i.select()}}return;
     case"goday":ui.date=b.dataset.d;ui.tab="entreno";ui.confirm=null;ui.notesOpen=null;selDay=null;toTop();break;
     case"dplus":if(S.routine.days.length<7){const nd={id:uid(),name:"Día "+(S.routine.days.length+1),wd:[],ex:[]};S.routine.days.push(nd);persist("routine");ui.rutDay=nd.id;ui.tab="rutina";toTop()}else toast("Máximo 7 días");break;
@@ -1898,6 +1909,8 @@ setTimeout(()=>{if(!ui.focus&&!document.body.classList.contains("locked"))restor
 document.addEventListener("submit",e=>{if(e.target.id!=="durform")return;e.preventDefault();const ds=e.target.dataset.d;const m=parseInt(document.getElementById("durmin").value,10);const L=S.logs[ds];
   if(L&&m>0&&m<600){L.duration=m*60;delete L.durationEst;persist("log-"+ds);toast("Duración guardada")}ui.durEdit=null;render()});
 
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ui.calSel){ui.calSel=null;ui.durEdit=null;document.body.classList.remove("modal-open");render()}});
+const _render2=render;render=function(){_render2();if(!ui.calSel||ui.tab!=="calendario")document.body.classList.remove("modal-open")};
 render();
 
 /* ---------- guardado en la cuenta ---------- */
