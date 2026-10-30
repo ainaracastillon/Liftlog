@@ -146,6 +146,10 @@ select.sel{height:42px;border:1px solid var(--line);background:var(--surface);bo
 .wd.taken{border-style:dashed}
 .cal button.plan .tag{color:var(--muted)}
 .cal button.plan{border:1px dashed var(--line)}
+.cal button .dur{font-size:10px;font-weight:700;color:var(--fg);opacity:.8;font-variant-numeric:tabular-nums;line-height:1.1}
+.cal button .dur.live{color:var(--accent);opacity:1}
+.stats4{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:480px){.stats4{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .lab{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--muted)}
 .lab .txt{color:var(--fg);font-weight:400;font-size:15px}
 .err{color:var(--down);font-size:13.5px;margin:0}
@@ -349,7 +353,6 @@ details summary::-webkit-details-marker{display:none}
   .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
   .pgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
   .mgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .cal{max-width:640px}
   .bodymap{max-width:460px;margin-left:auto;margin-right:auto}
   .focus,.focus-done,.wz,.auth{max-width:620px;margin-left:auto;margin-right:auto}
 }
@@ -370,11 +373,33 @@ details summary::-webkit-details-marker{display:none}
   .figrow{max-width:560px}
   body.locked{padding-left:0}
 }
+@media (min-width:900px){
+  .calwrap{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:24px;align-items:start}
+  .calside .stats4{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0}
+  .calside{position:sticky;top:0}
+  .cal{gap:6px}
+  .cal .cwd{font-size:12px}
+  .cal button{aspect-ratio:auto;min-height:88px;align-items:flex-start;padding:8px 8px 6px;gap:3px;border-radius:12px}
+  .cal button .num{font-size:20px}
+  .cal button .tag{font-size:12px;padding:0;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;text-align:left}
+  .cal button .dur{font-size:12px;margin-top:auto}
+  .cal button:hover{border-color:var(--accent)}
+}
 @media (min-width:1280px){
   #view .exlist{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 .fpick{margin-top:12px}
 .fpick .dsw select{height:48px;font-size:19px}
+#livebar{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--hh,62px) + 8px);z-index:25;display:flex;align-items:center;gap:10px;background:var(--accent);color:var(--on-accent);border:0;border-radius:999px;padding:8px 8px 8px 14px;font-weight:600;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.2);max-width:calc(100vw - 32px)}
+#livebar i{width:9px;height:9px;border-radius:50%;background:currentColor;animation:pulse 1.2s ease-in-out infinite;flex:0 0 auto}
+#livebar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#livebar b{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+#livebar .lb-go{background:var(--on-accent);color:var(--accent);border-radius:999px;padding:4px 10px;font-size:13px}
+@keyframes pulse{50%{opacity:.35}}
+#livebar em{font-style:normal}
+body.haslive main{padding-top:58px}
+@media (max-width:420px){#livebar em{display:none}}
+@media (min-width:900px){#livebar{left:calc(50% + 112px)}}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-x:none}
@@ -566,21 +591,25 @@ function vEntreno(){
 }
 const badgesHTML=(id,date,sets)=>compare(id,date,sets).map(([c,t])=>`<span class="badge ${c}">${t}</span>`).join("");
 
+const fmtDur=s=>{s=Math.round(s||0);if(s<60)return s+" s";const m=Math.round(s/60);return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")};
+const fmtDurShort=s=>{const m=Math.max(1,Math.round((s||0)/60));return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")};
 function vCal(){
   const [y,m]=ui.month.split("-").map(Number);
   const first=new Date(y,m-1,1);const startDow=(first.getDay()+6)%7;const nd=new Date(y,m,0).getDate();
   const monthLogs=sortedDates().filter(d=>d.startsWith(ui.month)&&Object.keys(S.logs[d].entries||{}).length);
-  let vol=0,sets=0;monthLogs.forEach(d=>{for(const k in S.logs[d].entries)for(const s of validSets(S.logs[d].entries[k].sets)){vol+=num(s.w)*num(s.r);sets++}});
-  let h=`<div class="cal-head"><button class="iconbtn" data-act="mprev" aria-label="Mes anterior">${ICON.left}</button><b>${MES[m-1]} ${y}</b><button class="iconbtn" data-act="mnext" aria-label="Mes siguiente">${ICON.right}</button></div>`;
+  let vol=0,sets=0,dur=0;monthLogs.forEach(d=>{dur+=S.logs[d].duration||0;for(const k in S.logs[d].entries)for(const s of validSets(S.logs[d].entries[k].sets)){vol+=num(s.w)*num(s.r);sets++}});
+  const live=ui.focus&&!ui.focus.done?ui.focus:null;
+  let h=`<div class="calwrap"><div class="calmain"><div class="cal-head"><button class="iconbtn" data-act="mprev" aria-label="Mes anterior">${ICON.left}</button><b>${MES[m-1]} ${y}</b><button class="iconbtn" data-act="mnext" aria-label="Mes siguiente">${ICON.right}</button></div>`;
   h+=`<div class="cal">${["L","M","X","J","V","S","D"].map(d=>`<span class="cwd">${d}</span>`).join("")}`;
   for(let i=0;i<startDow;i++)h+=`<button class="out" tabindex="-1" aria-hidden="true"></button>`;
   for(let d=1;d<=nd;d++){const ds=y+"-"+pad(m)+"-"+pad(d);const L=S.logs[ds];const done=L&&Object.keys(L.entries||{}).length;
-    const pl=!done&&ds>=TODAY?plannedFor(ds):null;
-    h+=`<button class="${done?"done":""} ${pl?"plan":""} ${ds===TODAY?"today":""}" data-act="goday" data-d="${ds}" aria-label="${longDate(ds)}${done?", "+esc(L.dayName):pl?", toca "+esc(pl.name):""}"><span class="num">${d}</span>${done?`<span class="tag">${esc(L.dayName)}</span>`:pl?`<span class="tag">${esc(pl.name)}</span>`:""}</button>`}
-  h+=`</div><div class="stats"><div class="stat"><b>${monthLogs.length}</b><span>entrenos</span></div><div class="stat"><b>${sets}</b><span>series</span></div><div class="stat"><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+"t":fmtKg(Math.round(vol))}</b><span>${vol>=1000?"tonelaje":"kg movidos"}</span></div></div>`;
-  if(monthLogs.length){h+=`<div class="eyebrow" style="margin:6px 0 8px">Sesiones del mes</div><div class="card hist">${monthLogs.slice().reverse().map(d=>{const L=S.logs[d];const ups=Object.keys(L.entries).map(k=>compare(k,d,L.entries[k].sets)[0]).filter(Boolean);const nu=ups.filter(b=>b[0]==="up"||b[0]==="pr").length,ndn=ups.filter(b=>b[0]==="down").length;return`<button class="h" data-act="goday" data-d="${d}" style="background:none;border:0;border-top:1px solid var(--line);text-align:left;width:100%"><span class="dt">${shortDate(d)}</span><span><b style="font-weight:600">${esc(L.dayName)}</b><br><span class="hint">${Object.keys(L.entries).length} ejercicios</span></span><span style="display:flex;gap:4px">${nu?`<span class="badge up">↑ ${nu}</span>`:""}${ndn?`<span class="badge down">↓ ${ndn}</span>`:""}</span></button>`}).join("")}</div>`}
+    const isLive=live&&live.date===ds;const pl=!done&&!isLive&&ds>=TODAY?plannedFor(ds):null;
+    const dtag=isLive?`<span class="dur live">● en curso</span>`:done&&L.duration?`<span class="dur">${fmtDurShort(L.duration)}</span>`:"";
+    h+=`<button class="${done||isLive?"done":""} ${pl?"plan":""} ${ds===TODAY?"today":""}" data-act="goday" data-d="${ds}" aria-label="${longDate(ds)}${done?", "+esc(L.dayName)+(L.duration?", "+fmtDur(L.duration):""):pl?", toca "+esc(pl.name):""}"><span class="num">${d}</span>${done?`<span class="tag">${esc(L.dayName)}</span>`:pl?`<span class="tag">${esc(pl.name)}</span>`:isLive?`<span class="tag">${esc((dayById(live.dayId)||{}).name||"")}</span>`:""}${dtag}</button>`}
+  h+=`</div></div><div class="calside"><div class="stats stats4"><div class="stat"><b>${monthLogs.length}</b><span>entrenos</span></div><div class="stat"><b>${dur?fmtDur(dur):"—"}</b><span>tiempo entrenando</span></div><div class="stat"><b>${sets}</b><span>series</span></div><div class="stat"><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+"t":fmtKg(Math.round(vol))}</b><span>${vol>=1000?"tonelaje":"kg movidos"}</span></div></div>`;
+  if(monthLogs.length){h+=`<div class="eyebrow" style="margin:6px 0 8px">Sesiones del mes</div><div class="card hist">${monthLogs.slice().reverse().map(d=>{const L=S.logs[d];const ups=Object.keys(L.entries).map(k=>compare(k,d,L.entries[k].sets)[0]).filter(Boolean);const nu=ups.filter(b=>b[0]==="up"||b[0]==="pr").length,ndn=ups.filter(b=>b[0]==="down").length;return`<button class="h" data-act="goday" data-d="${d}" style="background:none;border:0;border-top:1px solid var(--line);text-align:left;width:100%"><span class="dt">${shortDate(d)}</span><span><b style="font-weight:600">${esc(L.dayName)}</b><br><span class="hint">${Object.keys(L.entries).length} ejercicios${L.duration?" · "+fmtDur(L.duration):""}</span></span><span style="display:flex;gap:4px">${nu?`<span class="badge up">↑ ${nu}</span>`:""}${ndn?`<span class="badge down">↓ ${ndn}</span>`:""}</span></button>`}).join("")}</div>`}
   else h+=`<div class="card empty">Sin entrenos apuntados este mes.<br>Toca un día para registrarlo.</div>`;
-  return h;
+  return h+`</div></div>`;
 }
 
 const WD=[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]];
@@ -1680,7 +1709,7 @@ const _render0=render;
 render=function(){ext();_render0();if(REST)restUpdate();if(ui.focus&&!ui.focus.done&&ui.tab==="entreno")startFocusTick()};
 const _vEntreno0=vEntreno;
 vEntreno=function(){
-  if(ui.focus&&dayById(selDay))return vFocus();
+  if(ui.focus){if(ui.focus.date){ui.date=ui.focus.date;ui._lastDate=ui.date}if(ui.focus.dayId&&dayById(ui.focus.dayId))selDay=ui.focus.dayId;if(dayById(selDay))return vFocus()}
   let h=_vEntreno0();const day=dayById(selDay);if(!day)return h;
   const tools=`<div class="tools"><button class="btn primary" data-act="focusstart" ${day.ex.length?"":"disabled"}>▶ Empezar entreno</button><button class="btn" data-act="platesopen">Discos</button><label class="restsel"><span class="hint">Descanso</span><select class="sel" id="restsec" aria-label="Tiempo de descanso">${[[0,"Sin aviso"],[60,"1:00"],[90,"1:30"],[120,"2:00"],[150,"2:30"],[180,"3:00"],[240,"4:00"]].map(([v,l])=>`<option value="${v}" ${(S.settings.autoRest?S.settings.rest:0)==v?"selected":""}>${l}</option>`).join("")}</select></label></div>`+(ui.plates&&ui.plates.open?platesHTML():"");
   const week=(()=>{const d=parseD(TODAY).getDay();const k="liftlog-wsum-"+weekStart(TODAY);let seen=false;try{seen=localStorage.getItem(k)==="1"}catch(e){}return d===1&&ui.date===TODAY&&!seen&&!ui.wsumHide?`<div style="margin-top:12px;position:relative">${summaryCard()}<button class="del" style="position:absolute;top:8px;right:8px" data-act="wsumhide" aria-label="Ocultar resumen">${ICON.x}</button></div>`:""})();
@@ -1741,7 +1770,7 @@ document.addEventListener("click",e=>{
     case"platesclose":ui.plates.open=false;render();return;
     case"noteopen":ui.noteOpen=ui.noteOpen||{};ui.noteOpen[id]=true;render();{const t=document.getElementById("note-"+id);if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}return;
     case"wsumhide":ui.wsumHide=true;try{localStorage.setItem("liftlog-wsum-"+weekStart(TODAY),"1")}catch(e){}render();return;
-    case"focusstart":ensureAudio();ui.focus={i:0,start:Date.now(),cur:{},snap:S.logs[ui.date]?JSON.parse(JSON.stringify(S.logs[ui.date])):null,added:0};ui.plates=null;render();toTop();return;
+    case"focusstart":ensureAudio();ui.focus={i:0,start:Date.now(),date:ui.date,dayId:selDay,cur:{},snap:S.logs[ui.date]?JSON.parse(JSON.stringify(S.logs[ui.date])):null,added:0};ui.plates=null;render();toTop();return;
     case"focusgo":{const v=+b.dataset.v;const day=dayById(selDay);if(v>=0&&v<day.ex.length){ui.focus.i=v;ui.plates=null;render();toTop()}return}
     case"fstep":{const x=dayById(selDay).ex[ui.focus.i];const c=ui.focus.cur[x.id];const d=+b.dataset.v;if(b.dataset.k==="w"){const st=(c.w<10||(d<0&&c.w<=10))?1:2.5;c.w=Math.max(0,roundW(c.w+d*st))}else c.r=Math.max(1,c.r+d);document.getElementById("fw").textContent=fmtKg(c.w);document.getElementById("fr").textContent=c.r;return}
     case"focusset":{const x=dayById(selDay).ex[ui.focus.i];const c=ui.focus.cur[x.id];const sets=getSets(x.id);for(let i=sets.length-1;i>=0;i--)if(num(sets[i].w)==null||!(num(sets[i].r)>0))sets.splice(i,1);sets.push({w:c.w,r:c.r});ui.focus.added=(ui.focus.added||0)+1;ui.focus.confirm=false;persist("log-"+ui.date);checkPR(x.id);
@@ -1774,6 +1803,52 @@ document.addEventListener("click",e=>{
     case"exportcsv":saveFile("liftlog-historial-"+TODAY+".csv","text/csv",exportCSV());return;
   }
 });
+
+/* ======================= EL ENTRENO NO SE PARA ======================= */
+const FKEY="liftlog-focus";let lastFocusJSON=null,FOCUS_DOC=null,wakeLock=null;
+function focusSnap(){const F=ui.focus;if(!F||F.done)return null;return {i:F.i,start:F.start,date:F.date||ui.date,dayId:F.dayId||selDay,cur:F.cur||{},snap:F.snap||null,added:F.added||0,rest:REST&&!REST.done?{end:REST.end,total:REST.total}:null,pid:ALL.active,uid:SERVER?SERVER.user.id:null}}
+function saveFocus(force){const v=focusSnap();const js=JSON.stringify(v);if(!force&&js===lastFocusJSON)return;lastFocusJSON=js;
+  try{v?localStorage.setItem(FKEY,js):localStorage.removeItem(FKEY)}catch(e){}
+  if(store){const r=store.ref(keyFor(ALL.active,"focus"));(v?r.set(v):r.delete()).catch(()=>{})}}
+function restoreFocus(v){
+  if(ui.focus)return;
+  if(!v){try{v=JSON.parse(localStorage.getItem(FKEY)||"null")}catch(e){v=null}if(v&&SERVER&&v.uid&&v.uid!==SERVER.user.id)v=null}
+  if(!v||!v.start||!dayById(v.dayId))return;
+  if(v.pid&&v.pid!==ALL.active&&ALL.data[v.pid])switchProfile(v.pid);
+  ui.focus={i:v.i||0,start:v.start,date:v.date,dayId:v.dayId,cur:v.cur||{},snap:v.snap||null,added:v.added||0};
+  ui.date=v.date;selDay=v.dayId;ui._lastDate=v.date;ui.tab="entreno";
+  if(v.rest&&v.rest.end>Date.now()){REST={end:v.rest.end,total:v.rest.total,done:false};clearInterval(restTick);restTick=setInterval(restUpdate,250)}
+  lastFocusJSON=JSON.stringify(focusSnap());keepAwake();render();toTop();toast("Tu entreno sigue en marcha");
+}
+async function keepAwake(){try{if(ui.focus&&!ui.focus.done&&navigator.wakeLock&&!wakeLock){wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>{wakeLock=null})}}catch(e){}}
+function releaseAwake(){try{wakeLock&&wakeLock.release()}catch(e){}wakeLock=null}
+/* barra «entreno en curso» en el resto de pestañas */
+function liveBar(){let el=document.getElementById("livebar");const on=ui.focus&&!ui.focus.done&&ui.tab!=="entreno"&&!document.body.classList.contains("locked");
+  document.body.classList.toggle("haslive",!!on);
+  if(!on){if(el)el.remove();return}
+  if(!el){el=document.createElement("button");el.id="livebar";el.setAttribute("data-act","golive");document.body.appendChild(el)}
+  const d=dayById(ui.focus.dayId);el.innerHTML=`<i></i><span>Entreno en curso<em>${d?" · "+esc(d.name):""}</em></span><b>${mmss((Date.now()-ui.focus.start)/1000)}</b><span class="lb-go">Volver</span>`}
+setInterval(()=>{liveBar();if(ui.focus&&!ui.focus.done)saveFocus()},1000);
+const _render1=render;
+render=function(){_render1();liveBar();if(ui.focus&&!ui.focus.done)saveFocus();else if(lastFocusJSON!==null&&lastFocusJSON!=="null")saveFocus(true)};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
+  if(a==="golive"){ui.tab="entreno";render();toTop();return}
+  if(a==="focusstart")setTimeout(keepAwake,0);
+  if(a==="focuscancelyes"||a==="focusend"){releaseAwake();try{localStorage.removeItem(FKEY)}catch(e){}setTimeout(()=>{saveFocus(true);if(window.__updPending)checkUpdate()},0)}
+  if(ui.focus)setTimeout(()=>saveFocus(),0)});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")keepAwake();else{saveFocus(true);if(typeof flushWrites==="function")flushWrites()}});
+window.addEventListener("pagehide",()=>{saveFocus(true)});
+/* no recargar por actualizaciones en mitad de un entreno */
+const _checkUpdate0=checkUpdate;
+checkUpdate=async function(){if(ui.focus&&!ui.focus.done){window.__updPending=true;return}return _checkUpdate0()};
+/* recuperar el entreno al abrir la app */
+const _fromDocs1=fromDocs;
+fromDocs=function(docs){const n=_fromDocs1(docs);const k=keyFor(n.active||"main","focus");const d=docs.find(x=>x.id===k);FOCUS_DOC=d&&d.data?JSON.parse(JSON.stringify(d.data)):null;return n};
+const _adopt0=adopt;
+adopt=function(docs){_adopt0(docs);if(!ui.focus&&docs.length)restoreFocus(FOCUS_DOC)};
+const _logout0=logout;
+logout=async function(){try{localStorage.removeItem(FKEY)}catch(e){}ui.focus=null;REST=null;releaseAwake();return _logout0()};
+setTimeout(()=>{if(!ui.focus&&!document.body.classList.contains("locked"))restoreFocus(null)},1500);
 
 render();
 
