@@ -415,6 +415,11 @@ body.haslive main{padding-top:58px}
 .ds-sets{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .calhint{margin:0 0 12px}
 .hist .h.hsel{background:var(--accent-soft)!important}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font-weight:600;font-size:inherit;text-decoration:underline}
+.durform{display:flex;align-items:center;gap:4px}
+.durform .txt{width:58px;height:32px;padding:0 6px;text-align:center}
+.durform span{font-size:12px;color:var(--muted)}
+.ds-kpis>div:first-child{grid-column:span 1}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-x:none}
@@ -606,6 +611,10 @@ function vEntreno(){
 }
 const badgesHTML=(id,date,sets)=>compare(id,date,sets).map(([c,t])=>`<span class="badge ${c}">${t}</span>`).join("");
 
+function durOf(L){if(!L)return null;if(L.duration)return{s:L.duration,est:!!L.durationEst};
+  let ts=[],n=0;for(const k in L.entries||{})for(const s of validSets(L.entries[k].sets)){n++;if(s.t)ts.push(s.t)}
+  if(!n)return null;if(ts.length>=2){ts.sort((a,b)=>a-b);return{s:Math.max(60,(ts[ts.length-1]-ts[0])/1000+120),est:true}}
+  return{s:n*150,est:true}}
 const fmtDur=s=>{s=Math.round(s||0);if(s<60)return s+" s";const m=Math.round(s/60);return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")};
 const fmtDurShort=s=>{const m=Math.max(1,Math.round((s||0)/60));return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")};
 function vDaySum(ds){
@@ -618,7 +627,7 @@ function vDaySum(ds){
   let sets=0,vol=0,prs=0;const ex=[];
   for(const id in L.entries){const e=L.entries[id];const vs=validSets(e.sets);if(!vs.length)continue;sets+=vs.length;vs.forEach(s=>vol+=num(s.w)*num(s.r));const b=compare(id,ds,vs);if(b.some(x=>x[0]==="pr"))prs++;ex.push({id,name:e.name||(exIndex()[id]||{}).name||"Ejercicio",vs,b})}
   h+=`<div class="ds-rut">${esc(L.dayName||"Entreno")}</div>`;
-  h+=`<div class="ds-kpis"><div><b>${L.duration?fmtDur(L.duration):"—"}</b><span>duración</span></div><div><b>${ex.length}</b><span>ejercicios</span></div><div><b>${sets}</b><span>series</span></div><div><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+" t":fmtN(vol)+" kg"}</b><span>levantados</span></div></div>`;
+  h+=`<div class="ds-kpis"><div>${ui.durEdit===ds?`<form id="durform" class="durform" data-d="${ds}" novalidate><input class="txt" id="durmin" inputmode="numeric" value="${Math.round((durOf(L)||{s:0}).s/60)}" aria-label="Minutos"><span>min</span><button class="btn small primary" type="submit">OK</button></form>`:`<b>${fmtDur(durOf(L).s)}</b><span>${durOf(L).est?"aprox. · ":""}duración <button class="linkbtn" data-act="duredit" data-d="${ds}">Editar</button></span>`}</div><div><b>${ex.length}</b><span>ejercicios</span></div><div><b>${sets}</b><span>series</span></div><div><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+" t":fmtN(vol)+" kg"}</b><span>levantados</span></div></div>`;
   if(prs)h+=`<p class="ds-pr">${prs} récord${prs===1?"":"s"} personal${prs===1?"":"es"} este día</p>`;
   h+=`<div class="ds-list">${ex.map(x=>`<div class="ds-ex"><div class="ds-exh"><b>${esc(x.name)}</b><span class="ds-b">${x.b.slice(0,1).map(([c,tx])=>`<span class="badge ${c}">${tx}</span>`).join("")}</span></div><div class="ds-sets">${x.vs.map((s,i)=>`<span class="set-pill">${fmtKg(num(s.w))}<em>(${num(s.r)})</em></span>`).join("")}</div></div>`).join("")}</div>`;
   h+=`<button class="btn" style="width:100%;margin-top:12px" data-act="goday" data-d="${ds}">Editar este entreno</button></div>`;
@@ -628,18 +637,18 @@ function vCal(){
   const [y,m]=ui.month.split("-").map(Number);
   const first=new Date(y,m-1,1);const startDow=(first.getDay()+6)%7;const nd=new Date(y,m,0).getDate();
   const monthLogs=sortedDates().filter(d=>d.startsWith(ui.month)&&Object.keys(S.logs[d].entries||{}).length);
-  let vol=0,sets=0,dur=0;monthLogs.forEach(d=>{dur+=S.logs[d].duration||0;for(const k in S.logs[d].entries)for(const s of validSets(S.logs[d].entries[k].sets)){vol+=num(s.w)*num(s.r);sets++}});
+  let vol=0,sets=0,dur=0;monthLogs.forEach(d=>{dur+=(durOf(S.logs[d])||{s:0}).s;for(const k in S.logs[d].entries)for(const s of validSets(S.logs[d].entries[k].sets)){vol+=num(s.w)*num(s.r);sets++}});
   const live=ui.focus&&!ui.focus.done?ui.focus:null;
   let h=`<div class="calwrap"><div class="calmain"><div class="cal-head"><button class="iconbtn" data-act="mprev" aria-label="Mes anterior">${ICON.left}</button><b>${MES[m-1]} ${y}</b><button class="iconbtn" data-act="mnext" aria-label="Mes siguiente">${ICON.right}</button></div>`;
   h+=`<div class="cal">${["L","M","X","J","V","S","D"].map(d=>`<span class="cwd">${d}</span>`).join("")}`;
   for(let i=0;i<startDow;i++)h+=`<button class="out" tabindex="-1" aria-hidden="true"></button>`;
   for(let d=1;d<=nd;d++){const ds=y+"-"+pad(m)+"-"+pad(d);const L=S.logs[ds];const done=L&&Object.keys(L.entries||{}).length;
     const isLive=live&&live.date===ds;const pl=!done&&!isLive&&ds>=TODAY?plannedFor(ds):null;
-    const dtag=isLive?`<span class="dur live">● en curso</span>`:done&&L.duration?`<span class="dur">${fmtDurShort(L.duration)}</span>`:"";
-    h+=`<button class="${done||isLive?"done":""} ${pl?"plan":""} ${ds===TODAY?"today":""} ${ui.calSel===ds?"sel":""}" data-act="calday" data-d="${ds}" aria-pressed="${ui.calSel===ds}" aria-label="${longDate(ds)}${done?", "+esc(L.dayName)+(L.duration?", "+fmtDur(L.duration):""):pl?", toca "+esc(pl.name):""}"><span class="num">${d}</span>${done?`<span class="tag">${esc(L.dayName)}</span>`:pl?`<span class="tag">${esc(pl.name)}</span>`:isLive?`<span class="tag">${esc((dayById(live.dayId)||{}).name||"")}</span>`:""}${dtag}</button>`}
+    const DU=done?durOf(L):null;const dtag=isLive?`<span class="dur live">● en curso</span>`:DU?`<span class="dur">${DU.est?"≈ ":""}${fmtDurShort(DU.s)}</span>`:"";
+    h+=`<button class="${done||isLive?"done":""} ${pl?"plan":""} ${ds===TODAY?"today":""} ${ui.calSel===ds?"sel":""}" data-act="calday" data-d="${ds}" aria-pressed="${ui.calSel===ds}" aria-label="${longDate(ds)}${done?", "+esc(L.dayName)+(DU?", "+fmtDur(DU.s):""):pl?", toca "+esc(pl.name):""}"><span class="num">${d}</span>${done?`<span class="tag">${esc(L.dayName)}</span>`:pl?`<span class="tag">${esc(pl.name)}</span>`:isLive?`<span class="tag">${esc((dayById(live.dayId)||{}).name||"")}</span>`:""}${dtag}</button>`}
   h+=`</div></div><div class="calside">${ui.calSel&&ui.calSel.startsWith(ui.month)?vDaySum(ui.calSel):`<p class="hint calhint">Toca un día para ver el resumen del entreno.</p>`}`;
   h+=`<div class="stats stats4"><div class="stat"><b>${monthLogs.length}</b><span>entrenos</span></div><div class="stat"><b>${dur?fmtDur(dur):"—"}</b><span>tiempo entrenando</span></div><div class="stat"><b>${sets}</b><span>series</span></div><div class="stat"><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+"t":fmtKg(Math.round(vol))}</b><span>${vol>=1000?"tonelaje":"kg movidos"}</span></div></div>`;
-  if(monthLogs.length){h+=`<div class="eyebrow" style="margin:6px 0 8px">Sesiones del mes</div><div class="card hist">${monthLogs.slice().reverse().map(d=>{const L=S.logs[d];const ups=Object.keys(L.entries).map(k=>compare(k,d,L.entries[k].sets)[0]).filter(Boolean);const nu=ups.filter(b=>b[0]==="up"||b[0]==="pr").length,ndn=ups.filter(b=>b[0]==="down").length;return`<button class="h ${ui.calSel===d?"hsel":""}" data-act="calday" data-d="${d}" style="background:none;border:0;border-top:1px solid var(--line);text-align:left;width:100%"><span class="dt">${shortDate(d)}</span><span><b style="font-weight:600">${esc(L.dayName)}</b><br><span class="hint">${Object.keys(L.entries).length} ejercicios${L.duration?" · "+fmtDur(L.duration):""}</span></span><span style="display:flex;gap:4px">${nu?`<span class="badge up">↑ ${nu}</span>`:""}${ndn?`<span class="badge down">↓ ${ndn}</span>`:""}</span></button>`}).join("")}</div>`}
+  if(monthLogs.length){h+=`<div class="eyebrow" style="margin:6px 0 8px">Sesiones del mes</div><div class="card hist">${monthLogs.slice().reverse().map(d=>{const L=S.logs[d];const ups=Object.keys(L.entries).map(k=>compare(k,d,L.entries[k].sets)[0]).filter(Boolean);const nu=ups.filter(b=>b[0]==="up"||b[0]==="pr").length,ndn=ups.filter(b=>b[0]==="down").length;return`<button class="h ${ui.calSel===d?"hsel":""}" data-act="calday" data-d="${d}" style="background:none;border:0;border-top:1px solid var(--line);text-align:left;width:100%"><span class="dt">${shortDate(d)}</span><span><b style="font-weight:600">${esc(L.dayName)}</b><br><span class="hint">${Object.keys(L.entries).length} ejercicios${durOf(L)?" · "+(durOf(L).est?"≈ ":"")+fmtDur(durOf(L).s):""}</span></span><span style="display:flex;gap:4px">${nu?`<span class="badge up">↑ ${nu}</span>`:""}${ndn?`<span class="badge down">↓ ${ndn}</span>`:""}</span></button>`}).join("")}</div>`}
   else h+=`<div class="card empty">Sin entrenos apuntados este mes.<br>Toca un día para registrarlo.</div>`;
   return h+`</div></div>`;
 }
@@ -741,6 +750,7 @@ document.addEventListener("input",e=>{
   const t=e.target;
   if(t.dataset.k){const sets=getSets(t.dataset.ex);const i=+t.dataset.i;while(sets.length<=i)sets.push({w:"",r:""});
     sets[i][t.dataset.k]=t.dataset.k==="w"?(num(t.value)??""):(t.value.replace(/\D/g,"")===""?"":+t.value.replace(/\D/g,""));
+    if(num(sets[i].w)!=null&&num(sets[i].r)>0&&!sets[i].t)sets[i].t=Date.now();
     refreshBadges(t.dataset.ex);persist("log-"+ui.date);return}
   if(t.dataset.notes){const p=parseNotes(t.value);const L=ensureLog();const x=dayById(selDay).ex.find(z=>z.id===t.dataset.notes);L.entries[t.dataset.notes]={name:x.name,sets:p.length?p:[{w:"",r:""}]};refreshBadges(t.dataset.notes);persist("log-"+ui.date);return}
   if(t.dataset.profname){const p=profById(t.dataset.profname);p.name=t.value;persistProfiles();const av=$("#avatar");if(p.id===ALL.active){av.textContent=initials(p.name)}return}
@@ -775,6 +785,7 @@ document.addEventListener("click",e=>{
     case"mprev":case"mnext":{const[y,m]=ui.month.split("-").map(Number);const d=new Date(y,m-1+(a==="mnext"?1:-1),1);ui.month=d.getFullYear()+"-"+pad(d.getMonth()+1);break}
     case"calday":ui.calSel=ui.calSel===b.dataset.d?null:b.dataset.d;render();{const el=document.getElementById("daysum");if(el&&window.matchMedia&&!matchMedia("(min-width:900px)").matches)el.scrollIntoView({behavior:"smooth",block:"start"})}return;
     case"calclose":ui.calSel=null;break;
+    case"duredit":ui.durEdit=b.dataset.d;render();{const i=document.getElementById("durmin");if(i){i.focus();i.select()}}return;
     case"goday":ui.date=b.dataset.d;ui.tab="entreno";ui.confirm=null;ui.notesOpen=null;selDay=null;toTop();break;
     case"dplus":if(S.routine.days.length<7){const nd={id:uid(),name:"Día "+(S.routine.days.length+1),wd:[],ex:[]};S.routine.days.push(nd);persist("routine");ui.rutDay=nd.id;ui.tab="rutina";toTop()}else toast("Máximo 7 días");break;
     case"rutopen":ui.rutDay=id;ui.confirm=null;toTop();break;
@@ -1807,7 +1818,7 @@ document.addEventListener("click",e=>{
     case"focusstart":ensureAudio();ui.focus={i:0,start:Date.now(),date:ui.date,dayId:selDay,cur:{},snap:S.logs[ui.date]?JSON.parse(JSON.stringify(S.logs[ui.date])):null,added:0};ui.plates=null;render();toTop();return;
     case"focusgo":{const v=+b.dataset.v;const day=dayById(selDay);if(v>=0&&v<day.ex.length){ui.focus.i=v;ui.plates=null;render();toTop()}return}
     case"fstep":{const x=dayById(selDay).ex[ui.focus.i];const c=ui.focus.cur[x.id];const d=+b.dataset.v;if(b.dataset.k==="w"){const st=(c.w<10||(d<0&&c.w<=10))?1:2.5;c.w=Math.max(0,roundW(c.w+d*st))}else c.r=Math.max(1,c.r+d);document.getElementById("fw").textContent=fmtKg(c.w);document.getElementById("fr").textContent=c.r;return}
-    case"focusset":{const x=dayById(selDay).ex[ui.focus.i];const c=ui.focus.cur[x.id];const sets=getSets(x.id);for(let i=sets.length-1;i>=0;i--)if(num(sets[i].w)==null||!(num(sets[i].r)>0))sets.splice(i,1);sets.push({w:c.w,r:c.r});ui.focus.added=(ui.focus.added||0)+1;ui.focus.confirm=false;persist("log-"+ui.date);checkPR(x.id);
+    case"focusset":{const x=dayById(selDay).ex[ui.focus.i];const c=ui.focus.cur[x.id];const sets=getSets(x.id);for(let i=sets.length-1;i>=0;i--)if(num(sets[i].w)==null||!(num(sets[i].r)>0))sets.splice(i,1);sets.push({w:c.w,r:c.r,t:Date.now()});ui.focus.added=(ui.focus.added||0)+1;ui.focus.confirm=false;persist("log-"+ui.date);checkPR(x.id);
       const n=validSets(sets).length;if(S.settings.autoRest&&S.settings.rest)startRest(S.settings.rest);
       if(n>=(+x.sets||1)){const D=dayById(selDay).ex;const L3=S.logs[ui.date];const pend=D.findIndex((z,j)=>j!==ui.focus.i&&validSets(L3&&L3.entries[z.id]?L3.entries[z.id].sets:[]).length<(+z.sets||1));toast(pend>=0?`${x.name} completado. Elige el siguiente cuando descanses.`:`¡Has completado todos los ejercicios! Pulsa «Terminar entreno».`)}render();return}
     case"focusdel":{const x=dayById(selDay).ex[ui.focus.i];const L=S.logs[ui.date];if(L&&L.entries[x.id]){const vs=validSets(L.entries[x.id].sets);const target=vs[+b.dataset.v];L.entries[x.id].sets=L.entries[x.id].sets.filter(s=>s!==target);if(!L.entries[x.id].sets.length)L.entries[x.id].sets=[{w:"",r:""}];ui.focus.added=Math.max(0,(ui.focus.added||0)-1);cleanup();persist("log-"+ui.date);render()}return}
@@ -1883,6 +1894,9 @@ adopt=function(docs){_adopt0(docs);if(!ui.focus&&docs.length)restoreFocus(FOCUS_
 const _logout0=logout;
 logout=async function(){try{localStorage.removeItem(FKEY)}catch(e){}ui.focus=null;REST=null;releaseAwake();return _logout0()};
 setTimeout(()=>{if(!ui.focus&&!document.body.classList.contains("locked"))restoreFocus(null)},1500);
+
+document.addEventListener("submit",e=>{if(e.target.id!=="durform")return;e.preventDefault();const ds=e.target.dataset.d;const m=parseInt(document.getElementById("durmin").value,10);const L=S.logs[ds];
+  if(L&&m>0&&m<600){L.duration=m*60;delete L.durationEst;persist("log-"+ds);toast("Duración guardada")}ui.durEdit=null;render()});
 
 render();
 
