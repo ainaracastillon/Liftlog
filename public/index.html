@@ -436,6 +436,16 @@ body.modal-open,body.modal-open main{overflow:hidden!important;touch-action:none
 .restin.bad{border-color:var(--down)}
 .restsel.compact{flex-direction:row;align-items:center;gap:6px}
 .restsel.compact .restin{height:36px;width:88px;font-size:17px;padding:0 4px}
+.restin{cursor:pointer;caret-color:transparent}
+.padsheet .padval{font-family:var(--display);font-size:44px;line-height:1;display:block;font-variant-numeric:tabular-nums}
+.padsheet .padval.bad{color:var(--down)}
+.padpre{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.padkeys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pk{height:58px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2);font-family:var(--display);font-weight:600;font-size:28px;color:var(--fg)}
+.pk:active{background:var(--accent-soft)}
+.pk.pkc{color:var(--accent);font-size:32px}
+@media (min-width:640px){.padsheet{max-width:380px}}
+.modal.noanim,.modal.noanim .sheet{animation:none}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-x:none}
@@ -683,7 +693,8 @@ function vCal(){
   if(monthLogs.length){h+=`<div class="eyebrow" style="margin:6px 0 8px">Sesiones del mes</div><div class="card hist">${monthLogs.slice().reverse().map(d=>{const L=S.logs[d];const ups=Object.keys(L.entries).map(k=>compare(k,d,L.entries[k].sets)[0]).filter(Boolean);const nu=ups.filter(b=>b[0]==="up"||b[0]==="pr").length,ndn=ups.filter(b=>b[0]==="down").length;return`<button class="h ${ui.calSel===d?"hsel":""}" data-act="calday" data-d="${d}" style="background:none;border:0;border-top:1px solid var(--line);text-align:left;width:100%"><span class="dt">${shortDate(d)}</span><span><b style="font-weight:600">${esc(L.dayName)}</b><br><span class="hint">${Object.keys(L.entries).length} ejercicios${durOf(L)?" · "+(durOf(L).est?"≈ ":"")+fmtDur(durOf(L).s):""}</span></span><span style="display:flex;gap:4px">${nu?`<span class="badge up">↑ ${nu}</span>`:""}${ndn?`<span class="badge down">↓ ${ndn}</span>`:""}</span></button>`}).join("")}</div>`}
   else h+=`<div class="card empty">Sin entrenos apuntados este mes.<br>Toca un día para registrarlo.</div>`;
   h+=`</div></div>`;
-  if(ui.calSel)h+=`<div class="modal" data-act="calclose" role="presentation"><div class="sheet" role="dialog" aria-modal="true" aria-label="Resumen del entreno"><span class="grab" aria-hidden="true"></span>${vDaySum(ui.calSel)}</div></div>`;
+  const calAnim=ui._calShown!==ui.calSel;ui._calShown=ui.calSel;
+  if(ui.calSel)h+=`<div class="modal ${calAnim?"":"noanim"}" data-act="calclose" role="presentation"><div class="sheet" role="dialog" aria-modal="true" aria-label="Resumen del entreno"><span class="grab" aria-hidden="true"></span>${vDaySum(ui.calSel)}</div></div>`;
   return h;
 }
 
@@ -1955,7 +1966,7 @@ function parseRest(v){v=String(v||"").trim().replace(",",".").replace(/\s*(min|m
   let s;if(/^\d{1,2}:\d{1,2}$/.test(v)){const [a,b]=v.split(":").map(Number);if(b>59)return null;s=a*60+b}else if(/^\d+(\.\d+)?$/.test(v)){const n=parseFloat(v);s=n<=15?Math.round(n*60):Math.round(n)}else return null;
   return s>0&&s<=1800?s:null}
 function restField(id,compact){const v=S.settings.autoRest&&S.settings.rest?mmss(S.settings.rest):"";
-  return `<label class="restsel ${compact?"compact":""}"><span class="hint">Descanso</span><input class="txt restin" id="${id}" type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" maxlength="5" value="${v}" placeholder="1:30" list="restopts" aria-label="Tiempo de descanso, por ejemplo 1:30"></label><datalist id="restopts"><option value="0:45"><option value="1:00"><option value="1:30"><option value="2:00"><option value="2:30"><option value="3:00"><option value="4:00"></datalist>`}
+  return `<label class="restsel ${compact?"compact":""}"><span class="hint">Descanso</span><input class="txt restin" id="${id}" type="text" inputmode="none" readonly data-act="restpad" data-id="${id}" value="${v}" placeholder="Sin aviso" aria-label="Tiempo de descanso, por ejemplo 1:30"></label><datalist id="restopts"><option value="0:45"><option value="1:00"><option value="1:30"><option value="2:00"><option value="2:30"><option value="3:00"><option value="4:00"></datalist>`}
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="restsec"||e.target.id==="restsec2")){e.preventDefault();e.target.blur()}});
 document.addEventListener("input",e=>{const el=e.target;if(el.id!=="restsec"&&el.id!=="restsec2")return;
   let v=el.value.replace(/[.,;'h]/g,":").replace(/[^\d:]/g,"");const parts=v.split(":");if(parts.length>2)v=parts[0]+":"+parts.slice(1).join("");
@@ -1976,6 +1987,31 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(
 },true);
 const _vEntrenoToday=vEntreno;vEntreno=function(){if(!ui.focus){ui.date=TODAY}let h=_vEntrenoToday();
   return h.replace(/<button class="iconbtn" data-act="dprev"[^>]*>[\s\S]*?<\/button>/,"").replace(/<button class="iconbtn" data-act="dnext"[^>]*>[\s\S]*?<\/button>/,"")};
+
+/* ===== teclado propio para el descanso (con «:») ===== */
+function applyRest(v){S.settings.autoRest=v>0;if(v>0)S.settings.rest=v;saveExtra("settings");
+  if(REST&&!REST.done&&v>0){const passed=REST.total-(REST.end-Date.now())/1000;REST.total=v;REST.end=Date.now()+Math.max(0,v-passed)*1000;restUpdate()}
+  toast(v?`Descanso de ${mmss(v)} tras cada serie`:"Sin aviso de descanso")}
+function padHTML(){const v=ui.restVal||"";const ok=parseRest(v);
+  const keys=["1","2","3","4","5","6","7","8","9",":","0","del"];
+  const anim=!ui.padShown;ui.padShown=true;return `<div class="modal ${anim?"":"noanim"}" data-act="padclose" role="presentation"><div class="sheet padsheet" role="dialog" aria-modal="true" aria-label="Tiempo de descanso"><span class="grab" aria-hidden="true"></span>
+  <div class="ds-h"><div><span class="eyebrow">Descanso entre series</span><b class="padval ${v&&ok===null?"bad":""}">${v||"0:00"}</b><span class="hint">${!v?"Escribe minutos:segundos":ok===null?"No es un tiempo válido":ok===0?"Sin aviso":mmss(ok)+" min"}</span></div><button class="del" data-act="padclose" aria-label="Cerrar">${ICON.x}</button></div>
+  <div class="padpre">${["0:45","1:00","1:30","2:00","2:30","3:00"].map(p=>`<button class="chip" data-act="padset" data-v="${p}">${p}</button>`).join("")}</div>
+  <div class="padkeys">${keys.map(k=>k==="del"?`<button class="pk" data-act="padkey" data-v="del" aria-label="Borrar">⌫</button>`:`<button class="pk ${k===":"?"pkc":""}" data-act="padkey" data-v="${k}">${k}</button>`).join("")}</div>
+  <div class="row" style="gap:8px;margin-top:12px"><button class="btn" style="flex:1" data-act="padnone">Sin aviso</button><button class="btn primary" style="flex:2" data-act="padok">Guardar</button></div></div></div>`}
+const _renderPad=render;render=function(){_renderPad();if(!ui.restPad)ui.padShown=false;if(ui.restPad){document.getElementById("view").insertAdjacentHTML("beforeend",padHTML());syncOverlay()}};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
+  if(a==="restpad"){ui.restPad=b.dataset.id;ui.restVal=S.settings.autoRest&&S.settings.rest?mmss(S.settings.rest):"";ui.restFresh=true;render();return}
+  if(!ui.restPad)return;
+  if(a==="padclose"){if(e.target.closest(".sheet")&&!b.classList.contains("del"))return;ui.restPad=null;render();return}
+  if(a==="padkey"){let v=ui.restFresh?"":(ui.restVal||"");ui.restFresh=false;const k=b.dataset.v;
+    if(k==="del")v=v.slice(0,-1);else if(k===":"){if(!v.includes(":"))v=(v||"0")+":"}else{if(v.length<5){v+=k;const [m,s]=v.split(":");if(s!==undefined&&s.length>2)v=m+":"+s.slice(0,2)}}
+    ui.restVal=v;render();return}
+  if(a==="padset"){ui.restVal=b.dataset.v;ui.restFresh=false;render();return}
+  if(a==="padnone"){applyRest(0);ui.restPad=null;render();return}
+  if(a==="padok"){let v=ui.restVal||"";if(/^\d{3,4}$/.test(v))v=v.slice(0,-2)+":"+v.slice(-2);const s=parseRest(v);if(s===null){toast("Escribe el descanso como 1:30");return}applyRest(s);ui.restPad=null;render();return}
+},true);
+document.addEventListener("keydown",e=>{if(!ui.restPad)return;if(/^[0-9:]$/.test(e.key)){e.preventDefault();document.querySelector(`[data-act=padkey][data-v="${e.key}"]`)?.click()}else if(e.key==="Backspace"){e.preventDefault();document.querySelector('[data-act=padkey][data-v="del"]')?.click()}else if(e.key==="Enter"){e.preventDefault();document.querySelector("[data-act=padok]")?.click()}else if(e.key==="Escape"){ui.restPad=null;render()}});
 
 render();
 
