@@ -432,6 +432,10 @@ body.modal-open,body.modal-open main{overflow:hidden!important;touch-action:none
 .durform .txt{width:58px;height:32px;padding:0 6px;text-align:center}
 .durform span{font-size:12px;color:var(--muted)}
 .ds-kpis>div:first-child{grid-column:span 1}
+.restin{height:42px;width:100px;padding:0 4px;text-align:center;font-family:var(--display);font-weight:600;font-size:20px}
+.restin.bad{border-color:var(--down)}
+.restsel.compact{flex-direction:row;align-items:center;gap:6px}
+.restsel.compact .restin{height:36px;width:88px;font-size:17px;padding:0 4px}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-x:none}
@@ -1726,7 +1730,7 @@ function vFocus(){
    <div class="fstep"><button data-act="fstep" data-k="w" data-v="-1" aria-label="Menos peso">−</button><label><b id="fw">${fmtKg(cur.w)}</b><span>kg</span></label><button data-act="fstep" data-k="w" data-v="1" aria-label="Más peso">+</button></div>
    <div class="fstep"><button data-act="fstep" data-k="r" data-v="-1" aria-label="Menos repeticiones">−</button><label><b id="fr">${cur.r}</b><span>reps</span></label><button data-act="fstep" data-k="r" data-v="1" aria-label="Más repeticiones">+</button></div>
    <button class="btn primary fdone" data-act="focusset">Serie hecha ✓</button>
-   <div class="row" style="justify-content:center;gap:8px;margin-top:8px"><button class="btn small ghost" data-act="platesopen" data-v="${cur.w}">Discos</button><button class="btn small ghost" data-act="restnow">Descanso ahora</button></div></div>
+   <div class="row" style="justify-content:center;gap:8px;margin-top:8px;flex-wrap:wrap">${restField("restsec2",true)}<button class="btn small ghost" data-act="platesopen" data-v="${cur.w}">Discos</button><button class="btn small ghost" data-act="restnow">Descanso ahora</button></div></div>
   ${ui.plates&&ui.plates.open?platesHTML():""}
   <div class="fnav"><button class="btn" data-act="focusgo" data-v="${F.i-1}" ${F.i===0?"disabled":""}>← Anterior</button>${F.i<day.ex.length-1?`<button class="btn primary" data-act="focusgo" data-v="${F.i+1}">Siguiente →</button>`:`<button class="btn primary" data-act="focusend">Terminar entreno</button>`}</div></div>`;
   return h;
@@ -1770,7 +1774,7 @@ const _vEntreno0=vEntreno;
 vEntreno=function(){
   if(ui.focus){if(ui.focus.date){ui.date=ui.focus.date;ui._lastDate=ui.date}if(ui.focus.dayId&&dayById(ui.focus.dayId))selDay=ui.focus.dayId;if(dayById(selDay))return vFocus()}
   let h=_vEntreno0();const day=dayById(selDay);if(!day)return h;
-  const tools=`<div class="tools"><button class="btn primary" data-act="focusstart" ${day.ex.length?"":"disabled"}>▶ Empezar entreno</button><button class="btn" data-act="platesopen">Discos</button><label class="restsel"><span class="hint">Descanso</span><select class="sel" id="restsec" aria-label="Tiempo de descanso">${[[0,"Sin aviso"],[60,"1:00"],[90,"1:30"],[120,"2:00"],[150,"2:30"],[180,"3:00"],[240,"4:00"]].map(([v,l])=>`<option value="${v}" ${(S.settings.autoRest?S.settings.rest:0)==v?"selected":""}>${l}</option>`).join("")}</select></label></div>`+(ui.plates&&ui.plates.open?platesHTML():"");
+  const tools=`<div class="tools"><button class="btn primary" data-act="focusstart" ${day.ex.length?"":"disabled"}>▶ Empezar entreno</button><button class="btn" data-act="platesopen">Discos</button>${restField("restsec")}</div>`+(ui.plates&&ui.plates.open?platesHTML():"");
   const week=(()=>{const d=parseD(TODAY).getDay();const k="liftlog-wsum-"+weekStart(TODAY);let seen=false;try{seen=localStorage.getItem(k)==="1"}catch(e){}return d===1&&ui.date===TODAY&&!seen&&!ui.wsumHide?`<div style="margin-top:12px;position:relative">${summaryCard()}<button class="del" style="position:absolute;top:8px;right:8px" data-act="wsumhide" aria-label="Ocultar resumen">${ICON.x}</button></div>`:""})();
   h=h.replace('<div class="stack" style="margin-top:14px">',tools+week+'<div style="margin-top:14px">'+warmHTML(day)+'</div><div class="stack" style="margin-top:12px">');
   for(const x of day.ex){
@@ -1802,7 +1806,10 @@ document.addEventListener("change",async e=>{
   const t=e.target;
   if(t.dataset&&t.dataset.k==="r"&&ui.tab==="entreno"){const L=S.logs[ui.date];const sets=L&&L.entries[t.dataset.ex]?L.entries[t.dataset.ex].sets:[];const s=sets[+t.dataset.i];
     if(s&&num(s.w)!=null&&num(s.r)>0){checkPR(t.dataset.ex);if(S.settings.autoRest&&S.settings.rest)startRest(S.settings.rest)}}
-  if(t.id==="restsec"){const v=+t.value;S.settings.autoRest=v>0;if(v>0)S.settings.rest=v;saveExtra("settings");toast(v?`Descanso de ${mmss(v)} tras cada serie`:"Sin aviso de descanso")}
+  if(t.id==="restsec"||t.id==="restsec2"){const v=parseRest(t.value);if(v===null){t.classList.add("bad");toast("Escribe el descanso como 1:30, 90 o 2");return}t.classList.remove("bad");
+    S.settings.autoRest=v>0;if(v>0)S.settings.rest=v;saveExtra("settings");t.value=v>0?mmss(v):"";
+    if(REST&&!REST.done&&v>0){const passed=REST.total-(REST.end-Date.now())/1000;REST.total=v;REST.end=Date.now()+Math.max(0,v-passed)*1000;restUpdate()}
+    toast(v?`Descanso de ${mmss(v)} tras cada serie`:"Sin aviso de descanso")}
   if(t.id==="pl-b"){ui.plates.bar=+t.value;const o=document.getElementById("pl-out");render()}
   if(t.id==="remtime"){S.settings.remTime=t.value;saveExtra("settings")}
   if(t.id==="photoin"&&t.files&&t.files[0]){try{const data=await resizeImage(t.files[0]);const id=uid();PHOTOS[id]={date:TODAY,data};savePhoto(id);toast("Foto guardada");render()}catch(err){toast("No se pudo leer la foto")}}
@@ -1927,6 +1934,15 @@ const _render3=render;render=function(){_render3();syncOverlay()};
 const _restUpdate0=restUpdate;restUpdate=function(){_restUpdate0();const rb=document.getElementById("restbar"),open=document.body.classList.contains("modal-open");if(rb){rb.inert=open}};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ui.photo){ui.photo=null;ui.photoDel=false;render()}});
 document.addEventListener("touchmove",e=>{if(document.body.classList.contains("modal-open")&&!e.target.closest(".sheet,.pview figure"))e.preventDefault()},{passive:false});
+
+/* descanso escrito a mano: 1:30, 90 (segundos) o 2 (minutos); vacío o 0 = sin aviso */
+function parseRest(v){v=String(v||"").trim().replace(",",".").replace(/\s*(min|m|s|seg|'|")\s*$/i,"");if(v===""||v==="0")return 0;
+  let s;if(/^\d{1,2}:\d{1,2}$/.test(v)){const [a,b]=v.split(":").map(Number);if(b>59)return null;s=a*60+b}else if(/^\d+(\.\d+)?$/.test(v)){const n=parseFloat(v);s=n<=15?Math.round(n*60):Math.round(n)}else return null;
+  return s>0&&s<=1800?s:null}
+function restField(id,compact){const v=S.settings.autoRest&&S.settings.rest?mmss(S.settings.rest):"";
+  return `<label class="restsel ${compact?"compact":""}"><span class="hint">Descanso</span><input class="txt restin" id="${id}" inputmode="decimal" value="${v}" placeholder="Sin aviso" list="restopts" autocomplete="off" aria-label="Tiempo de descanso, por ejemplo 1:30"></label><datalist id="restopts"><option value="0:45"><option value="1:00"><option value="1:30"><option value="2:00"><option value="2:30"><option value="3:00"><option value="4:00"></datalist>`}
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="restsec"||e.target.id==="restsec2")){e.preventDefault();e.target.blur()}});
+document.addEventListener("focusin",e=>{if(e.target.id==="restsec"||e.target.id==="restsec2")setTimeout(()=>e.target.select(),0)});
 
 render();
 
