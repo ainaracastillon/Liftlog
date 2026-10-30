@@ -400,6 +400,21 @@ details summary::-webkit-details-marker{display:none}
 body.haslive main{padding-top:58px}
 @media (max-width:420px){#livebar em{display:none}}
 @media (min-width:900px){#livebar{left:calc(50% + 112px)}}
+.daysum{margin-bottom:12px;border-color:var(--accent)}
+.ds-h{display:flex;justify-content:space-between;align-items:flex-start}
+.ds-h b{display:block;font-family:var(--display);font-weight:700;font-size:26px;line-height:1.1}
+.ds-rut{font-weight:600;color:var(--accent);margin-top:2px}
+.ds-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:12px 0 4px}
+.ds-kpis b{display:block;font-family:var(--display);font-size:20px;line-height:1.1}
+.ds-kpis span{font-size:11.5px;color:var(--muted)}
+.ds-pr{margin:8px 0 0;font-size:13.5px;font-weight:600;color:var(--accent)}
+.ds-list{display:flex;flex-direction:column;margin-top:8px}
+.ds-ex{padding:10px 0;border-top:1px solid var(--line)}
+.ds-exh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ds-exh b{font-weight:600;font-size:14.5px;min-width:0}
+.ds-sets{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.calhint{margin:0 0 12px}
+.hist .h.hsel{background:var(--accent-soft)!important}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-x:none}
@@ -593,6 +608,22 @@ const badgesHTML=(id,date,sets)=>compare(id,date,sets).map(([c,t])=>`<span class
 
 const fmtDur=s=>{s=Math.round(s||0);if(s<60)return s+" s";const m=Math.round(s/60);return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")};
 const fmtDurShort=s=>{const m=Math.max(1,Math.round((s||0)/60));return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")};
+function vDaySum(ds){
+  const L=S.logs[ds];const live=ui.focus&&!ui.focus.done&&ui.focus.date===ds;
+  const done=L&&Object.keys(L.entries||{}).some(k=>validSets(L.entries[k].sets).length);
+  let h=`<div class="card daysum" id="daysum"><div class="ds-h"><div><span class="eyebrow">${ds===TODAY?"Hoy":ds===addDays(TODAY,-1)?"Ayer":DIA[parseD(ds).getDay()]}</span><b>${parseD(ds).getDate()} de ${MES[parseD(ds).getMonth()]}</b></div><button class="del" data-act="calclose" aria-label="Cerrar resumen">${ICON.x}</button></div>`;
+  if(live){const d=dayById(ui.focus.dayId);return h+`<p style="margin:10px 0"><b>${esc(d?d.name:"Entreno")}</b> · en curso desde hace ${mmss((Date.now()-ui.focus.start)/1000)}</p><button class="btn primary" style="width:100%" data-act="golive">Volver al entreno</button></div>`}
+  if(!done){const pl=plannedFor(ds);
+    return h+`<p class="hint" style="margin:10px 0 12px">${ds>TODAY?(pl?`Este día toca <b style="color:var(--accent)">${esc(pl.name)}</b>.`:"Día de descanso según tu semana."):"No apuntaste entreno este día."}</p>${ds<=TODAY?`<button class="btn" style="width:100%" data-act="goday" data-d="${ds}">Apuntar entreno de este día</button>`:""}</div>`}
+  let sets=0,vol=0,prs=0;const ex=[];
+  for(const id in L.entries){const e=L.entries[id];const vs=validSets(e.sets);if(!vs.length)continue;sets+=vs.length;vs.forEach(s=>vol+=num(s.w)*num(s.r));const b=compare(id,ds,vs);if(b.some(x=>x[0]==="pr"))prs++;ex.push({id,name:e.name||(exIndex()[id]||{}).name||"Ejercicio",vs,b})}
+  h+=`<div class="ds-rut">${esc(L.dayName||"Entreno")}</div>`;
+  h+=`<div class="ds-kpis"><div><b>${L.duration?fmtDur(L.duration):"—"}</b><span>duración</span></div><div><b>${ex.length}</b><span>ejercicios</span></div><div><b>${sets}</b><span>series</span></div><div><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+" t":fmtN(vol)+" kg"}</b><span>levantados</span></div></div>`;
+  if(prs)h+=`<p class="ds-pr">${prs} récord${prs===1?"":"s"} personal${prs===1?"":"es"} este día</p>`;
+  h+=`<div class="ds-list">${ex.map(x=>`<div class="ds-ex"><div class="ds-exh"><b>${esc(x.name)}</b><span class="ds-b">${x.b.slice(0,1).map(([c,tx])=>`<span class="badge ${c}">${tx}</span>`).join("")}</span></div><div class="ds-sets">${x.vs.map((s,i)=>`<span class="set-pill">${fmtKg(num(s.w))}<em>(${num(s.r)})</em></span>`).join("")}</div></div>`).join("")}</div>`;
+  h+=`<button class="btn" style="width:100%;margin-top:12px" data-act="goday" data-d="${ds}">Editar este entreno</button></div>`;
+  return h;
+}
 function vCal(){
   const [y,m]=ui.month.split("-").map(Number);
   const first=new Date(y,m-1,1);const startDow=(first.getDay()+6)%7;const nd=new Date(y,m,0).getDate();
@@ -605,9 +636,10 @@ function vCal(){
   for(let d=1;d<=nd;d++){const ds=y+"-"+pad(m)+"-"+pad(d);const L=S.logs[ds];const done=L&&Object.keys(L.entries||{}).length;
     const isLive=live&&live.date===ds;const pl=!done&&!isLive&&ds>=TODAY?plannedFor(ds):null;
     const dtag=isLive?`<span class="dur live">● en curso</span>`:done&&L.duration?`<span class="dur">${fmtDurShort(L.duration)}</span>`:"";
-    h+=`<button class="${done||isLive?"done":""} ${pl?"plan":""} ${ds===TODAY?"today":""}" data-act="goday" data-d="${ds}" aria-label="${longDate(ds)}${done?", "+esc(L.dayName)+(L.duration?", "+fmtDur(L.duration):""):pl?", toca "+esc(pl.name):""}"><span class="num">${d}</span>${done?`<span class="tag">${esc(L.dayName)}</span>`:pl?`<span class="tag">${esc(pl.name)}</span>`:isLive?`<span class="tag">${esc((dayById(live.dayId)||{}).name||"")}</span>`:""}${dtag}</button>`}
-  h+=`</div></div><div class="calside"><div class="stats stats4"><div class="stat"><b>${monthLogs.length}</b><span>entrenos</span></div><div class="stat"><b>${dur?fmtDur(dur):"—"}</b><span>tiempo entrenando</span></div><div class="stat"><b>${sets}</b><span>series</span></div><div class="stat"><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+"t":fmtKg(Math.round(vol))}</b><span>${vol>=1000?"tonelaje":"kg movidos"}</span></div></div>`;
-  if(monthLogs.length){h+=`<div class="eyebrow" style="margin:6px 0 8px">Sesiones del mes</div><div class="card hist">${monthLogs.slice().reverse().map(d=>{const L=S.logs[d];const ups=Object.keys(L.entries).map(k=>compare(k,d,L.entries[k].sets)[0]).filter(Boolean);const nu=ups.filter(b=>b[0]==="up"||b[0]==="pr").length,ndn=ups.filter(b=>b[0]==="down").length;return`<button class="h" data-act="goday" data-d="${d}" style="background:none;border:0;border-top:1px solid var(--line);text-align:left;width:100%"><span class="dt">${shortDate(d)}</span><span><b style="font-weight:600">${esc(L.dayName)}</b><br><span class="hint">${Object.keys(L.entries).length} ejercicios${L.duration?" · "+fmtDur(L.duration):""}</span></span><span style="display:flex;gap:4px">${nu?`<span class="badge up">↑ ${nu}</span>`:""}${ndn?`<span class="badge down">↓ ${ndn}</span>`:""}</span></button>`}).join("")}</div>`}
+    h+=`<button class="${done||isLive?"done":""} ${pl?"plan":""} ${ds===TODAY?"today":""} ${ui.calSel===ds?"sel":""}" data-act="calday" data-d="${ds}" aria-pressed="${ui.calSel===ds}" aria-label="${longDate(ds)}${done?", "+esc(L.dayName)+(L.duration?", "+fmtDur(L.duration):""):pl?", toca "+esc(pl.name):""}"><span class="num">${d}</span>${done?`<span class="tag">${esc(L.dayName)}</span>`:pl?`<span class="tag">${esc(pl.name)}</span>`:isLive?`<span class="tag">${esc((dayById(live.dayId)||{}).name||"")}</span>`:""}${dtag}</button>`}
+  h+=`</div></div><div class="calside">${ui.calSel&&ui.calSel.startsWith(ui.month)?vDaySum(ui.calSel):`<p class="hint calhint">Toca un día para ver el resumen del entreno.</p>`}`;
+  h+=`<div class="stats stats4"><div class="stat"><b>${monthLogs.length}</b><span>entrenos</span></div><div class="stat"><b>${dur?fmtDur(dur):"—"}</b><span>tiempo entrenando</span></div><div class="stat"><b>${sets}</b><span>series</span></div><div class="stat"><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+"t":fmtKg(Math.round(vol))}</b><span>${vol>=1000?"tonelaje":"kg movidos"}</span></div></div>`;
+  if(monthLogs.length){h+=`<div class="eyebrow" style="margin:6px 0 8px">Sesiones del mes</div><div class="card hist">${monthLogs.slice().reverse().map(d=>{const L=S.logs[d];const ups=Object.keys(L.entries).map(k=>compare(k,d,L.entries[k].sets)[0]).filter(Boolean);const nu=ups.filter(b=>b[0]==="up"||b[0]==="pr").length,ndn=ups.filter(b=>b[0]==="down").length;return`<button class="h ${ui.calSel===d?"hsel":""}" data-act="calday" data-d="${d}" style="background:none;border:0;border-top:1px solid var(--line);text-align:left;width:100%"><span class="dt">${shortDate(d)}</span><span><b style="font-weight:600">${esc(L.dayName)}</b><br><span class="hint">${Object.keys(L.entries).length} ejercicios${L.duration?" · "+fmtDur(L.duration):""}</span></span><span style="display:flex;gap:4px">${nu?`<span class="badge up">↑ ${nu}</span>`:""}${ndn?`<span class="badge down">↓ ${ndn}</span>`:""}</span></button>`}).join("")}</div>`}
   else h+=`<div class="card empty">Sin entrenos apuntados este mes.<br>Toca un día para registrarlo.</div>`;
   return h+`</div></div>`;
 }
@@ -741,6 +773,8 @@ document.addEventListener("click",e=>{
     case"clearyes":delete S.logs[ui.date];persist("log-"+ui.date);ui.confirm=null;toast("Registro borrado");break;
     case"clearno":ui.confirm=null;break;
     case"mprev":case"mnext":{const[y,m]=ui.month.split("-").map(Number);const d=new Date(y,m-1+(a==="mnext"?1:-1),1);ui.month=d.getFullYear()+"-"+pad(d.getMonth()+1);break}
+    case"calday":ui.calSel=ui.calSel===b.dataset.d?null:b.dataset.d;render();{const el=document.getElementById("daysum");if(el&&window.matchMedia&&!matchMedia("(min-width:900px)").matches)el.scrollIntoView({behavior:"smooth",block:"start"})}return;
+    case"calclose":ui.calSel=null;break;
     case"goday":ui.date=b.dataset.d;ui.tab="entreno";ui.confirm=null;ui.notesOpen=null;selDay=null;toTop();break;
     case"dplus":if(S.routine.days.length<7){const nd={id:uid(),name:"Día "+(S.routine.days.length+1),wd:[],ex:[]};S.routine.days.push(nd);persist("routine");ui.rutDay=nd.id;ui.tab="rutina";toTop()}else toast("Máximo 7 días");break;
     case"rutopen":ui.rutDay=id;ui.confirm=null;toTop();break;
