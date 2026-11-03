@@ -446,6 +446,11 @@ body.modal-open,body.modal-open main{overflow:hidden!important;touch-action:none
 .pk.pkc{color:var(--accent);font-size:32px}
 @media (min-width:640px){.padsheet{max-width:380px}}
 .modal.noanim,.modal.noanim .sheet{animation:none}
+.fval{background:none;border:0;padding:6px 4px;border-radius:12px;display:flex;align-items:baseline;justify-content:center;gap:6px;color:var(--fg);cursor:pointer}
+.fval:hover,.fval:focus-visible{background:var(--surface-2)}
+.fval b{font-family:var(--display);font-size:46px;line-height:1;font-variant-numeric:tabular-nums;border-bottom:2px dashed var(--line)}
+.fval span{color:var(--muted);font-size:14px}
+.padval small{font-size:18px;color:var(--muted);font-family:var(--body)}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-x:none}
@@ -1753,8 +1758,8 @@ function vFocus(){
   ${s?`<p class="hint" style="margin:6px 0 0">Sugerencia: <b style="color:var(--accent)">${fmtKg(s.w)} kg × ${s.r}</b></p>`:""}
   <div class="fsets">${done.length?done.map((z,i)=>`<span class="set-pill big">${i+1}. ${fmtKg(num(z.w))}<em>(${num(z.r)})</em><button data-act="focusdel" data-v="${i}" aria-label="Borrar serie ${i+1}">×</button></span>`).join(""):`<span class="hint">Aún no has hecho series de este ejercicio.</span>`}</div>
   <div class="fedit"><span class="eyebrow">Serie ${done.length+1}</span>
-   <div class="fstep"><button data-act="fstep" data-k="w" data-v="-1" aria-label="Menos peso">−</button><label><b id="fw">${fmtKg(cur.w)}</b><span>kg</span></label><button data-act="fstep" data-k="w" data-v="1" aria-label="Más peso">+</button></div>
-   <div class="fstep"><button data-act="fstep" data-k="r" data-v="-1" aria-label="Menos repeticiones">−</button><label><b id="fr">${cur.r}</b><span>reps</span></label><button data-act="fstep" data-k="r" data-v="1" aria-label="Más repeticiones">+</button></div>
+   <div class="fstep"><button data-act="fstep" data-k="w" data-v="-1" aria-label="Menos peso">−</button><button class="fval" data-act="numpad" data-k="w" aria-label="Escribir kilos"><b id="fw">${fmtKg(cur.w)}</b><span>kg</span></button><button data-act="fstep" data-k="w" data-v="1" aria-label="Más peso">+</button></div>
+   <div class="fstep"><button data-act="fstep" data-k="r" data-v="-1" aria-label="Menos repeticiones">−</button><button class="fval" data-act="numpad" data-k="r" aria-label="Escribir repeticiones"><b id="fr">${cur.r}</b><span>reps</span></button><button data-act="fstep" data-k="r" data-v="1" aria-label="Más repeticiones">+</button></div>
    <button class="btn primary fdone" data-act="focusset">Serie hecha ✓</button>
    <div class="row" style="justify-content:center;gap:8px;margin-top:8px;flex-wrap:wrap">${restField("restsec2",true)}<button class="btn small ghost" data-act="platesopen" data-v="${cur.w}">Discos</button><button class="btn small ghost" data-act="restnow">Descanso ahora</button></div></div>
   ${ui.plates&&ui.plates.open?platesHTML():""}
@@ -2012,6 +2017,26 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(
   if(a==="padok"){let v=ui.restVal||"";if(/^\d{3,4}$/.test(v))v=v.slice(0,-2)+":"+v.slice(-2);const s=parseRest(v);if(s===null){toast("Escribe el descanso como 1:30");return}applyRest(s);ui.restPad=null;render();return}
 },true);
 document.addEventListener("keydown",e=>{if(!ui.restPad)return;if(/^[0-9:]$/.test(e.key)){e.preventDefault();document.querySelector(`[data-act=padkey][data-v="${e.key}"]`)?.click()}else if(e.key==="Backspace"){e.preventDefault();document.querySelector('[data-act=padkey][data-v="del"]')?.click()}else if(e.key==="Enter"){e.preventDefault();document.querySelector("[data-act=padok]")?.click()}else if(e.key==="Escape"){ui.restPad=null;render()}});
+
+/* ===== teclado numérico propio para kilos y repeticiones en el modo entreno ===== */
+function numPadHTML(){const P=ui.numPad;const kg=P.k==="w";const v=P.val||"";
+  const keys=["1","2","3","4","5","6","7","8","9",kg?",":"","0","del"];
+  const anim=!ui.numShown;ui.numShown=true;
+  return `<div class="modal ${anim?"":"noanim"}" data-act="numclose" role="presentation"><div class="sheet padsheet" role="dialog" aria-modal="true" aria-label="${kg?"Kilos":"Repeticiones"}"><span class="grab" aria-hidden="true"></span>
+  <div class="ds-h"><div><span class="eyebrow">${kg?"Peso de la serie":"Repeticiones"}</span><b class="padval">${v||"0"}<small> ${kg?"kg":"reps"}</small></b></div><button class="del" data-act="numclose" aria-label="Cerrar">${ICON.x}</button></div>
+  <div class="padkeys" style="margin-top:12px">${keys.map(k=>k===""?`<span></span>`:k==="del"?`<button class="pk" data-act="numkey" data-v="del" aria-label="Borrar">⌫</button>`:`<button class="pk ${k===","?"pkc":""}" data-act="numkey" data-v="${k}">${k}</button>`).join("")}</div>
+  <button class="btn primary" style="width:100%;margin-top:12px;height:50px" data-act="numok">Guardar</button></div></div>`}
+const _renderNum=render;render=function(){_renderNum();if(!ui.numPad)ui.numShown=false;if(ui.numPad&&ui.focus){document.getElementById("view").insertAdjacentHTML("beforeend",numPadHTML());syncOverlay()}};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
+  if(a==="numpad"&&ui.focus){const x=dayById(selDay).ex[ui.focus.i];const c=ui.focus.cur[x.id];ui.numPad={k:b.dataset.k,exId:x.id,val:"",fresh:true,start:b.dataset.k==="w"?fmtKg(c.w):String(c.r)};ui.numPad.val=ui.numPad.start;render();return}
+  if(!ui.numPad)return;
+  if(a==="numclose"){if(e.target.closest(".sheet")&&!b.classList.contains("del"))return;ui.numPad=null;render();return}
+  if(a==="numkey"){const P=ui.numPad;let v=P.fresh?"":P.val;P.fresh=false;const k=b.dataset.v;
+    if(k==="del")v=v.slice(0,-1);else if(k===","){if(!v.includes(","))v=(v||"0")+","}else{const [i,d]=v.split(",");if(d!==undefined){if(d.length<2)v+=k}else if(i.length<(P.k==="w"?3:3))v=(v==="0"?"":v)+k}
+    P.val=v;render();return}
+  if(a==="numok"){const P=ui.numPad;const c=ui.focus.cur[P.exId];const n=num(P.val);if(P.k==="w"){if(n!=null&&n>=0)c.w=Math.round(n*100)/100}else{const r=parseInt(P.val,10);if(r>0)c.r=r}ui.numPad=null;render();return}
+},true);
+document.addEventListener("keydown",e=>{if(!ui.numPad)return;const k=e.key===","||e.key==="."?",":e.key;if(/^[0-9,]$/.test(k)){e.preventDefault();document.querySelector(`[data-act=numkey][data-v="${k}"]`)?.click()}else if(e.key==="Backspace"){e.preventDefault();document.querySelector('[data-act=numkey][data-v="del"]')?.click()}else if(e.key==="Enter"){e.preventDefault();document.querySelector("[data-act=numok]")?.click()}else if(e.key==="Escape"){ui.numPad=null;render()}});
 
 render();
 
