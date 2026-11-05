@@ -579,7 +579,8 @@ let toastT;function toast(m){let t=$(".toast");if(!t){t=document.createElement("
 /* ---------- datos derivados ---------- */
 const sortedDates=()=>Object.keys(S.logs).sort();
 const rawDay=id=>S.routine.days.find(d=>d.id===id);
-let dayById=id=>{const d=rawDay(id);if(!d||ui.tab!=="entreno")return d;const date=ui.focus&&ui.focus.date?ui.focus.date:ui.date;const sw=S.settings&&S.settings.swaps&&S.settings.swaps[date];
+let dayById=id=>{const d=rawDay(id);if(!d||ui.tab!=="entreno")return d;const date=ui.focus&&ui.focus.date?ui.focus.date:ui.date;let sw=S.settings&&S.settings.swaps&&S.settings.swaps[date];
+  if(!sw||sw.dayId!==id){const pend=(S.settings&&S.settings.pendSwaps||[]).filter(q=>q.dayId===id&&q.from<date);if(pend.length){sw={dayId:id,map:{}};pend.forEach(q=>Object.assign(sw.map,q.map))}}
   if(!sw||sw.dayId!==id||!sw.map||!Object.keys(sw.map).length)return d;
   return {...d,ex:d.ex.map(x=>{const nid=sw.map[x.id];if(!nid)return x;for(const o of S.routine.days){const y=o.ex.find(z=>z.id===nid);if(y)return Object.assign(Object.create(y),{swappedFrom:x,fromDay:o.name})}return x})}};
 function exIndex(){const m={};S.routine.days.forEach(d=>d.ex.forEach(x=>m[x.id]={...x,day:d.name}));for(const k of sortedDates()){const L=S.logs[k];for(const id in L.entries||{})if(!m[id])m[id]={id,name:L.entries[id].name,day:L.dayName,orphan:true}}return m}
@@ -2062,18 +2063,29 @@ function swapHTML(){const W=ui.swap;const day=rawDay(selDay);const orig=day&&day
   if(cur)h+=`<div class="swapnow"><span>Hoy lo has cambiado por <b>${esc((exIndex()[cur]||{}).name||"otro")}</b></span><button class="btn small" data-act="swapundo">Deshacer</button></div>`;
   if(!others.length)h+=`<p class="hint">Tu rutina solo tiene un día con ejercicios.</p>`;
   h+=others.map(d=>`<div class="swapday"><span class="eyebrow">${esc(d.name)}${(d.wd||[]).length?" · "+wdText(d).toLowerCase():""}</span>${d.ex.map(y=>`<button class="swapopt ${sel===y.id?"on":""}" data-act="swappick" data-v="${y.id}" aria-pressed="${sel===y.id}"><b>${esc(y.name)}</b><span class="hint">${y.sets}×${esc(y.reps)}${findExercise(y.name)?" · "+esc(findExercise(y.name).g):""}</span></button>`).join("")}</div>`).join("");
-  if(sel){const y=exIndex()[sel];h+=`<div class="swapact"><button class="btn primary" data-act="swaptoday">Solo hoy</button><button class="btn" data-act="swapforever">Intercambiar en la rutina</button><p class="hint" style="margin:6px 0 0">«Solo hoy» hace ${esc(y.name)} en lugar de ${esc(orig.name)} hoy. «Intercambiar en la rutina» los cambia de día para siempre.</p></div>`}
+  if(sel){const y=exIndex()[sel];h+=`<div class="swapact"><button class="btn primary" data-act="swaptoday">Solo hoy</button><button class="btn" data-act="swaponce">Intercambiar una vez</button><button class="btn" data-act="swapforever">Intercambiar siempre</button><p class="hint" style="margin:6px 0 0">«Solo hoy»: hoy haces ${esc(y.name)} en lugar de ${esc(orig.name)}. «Intercambiar una vez»: además, el próximo día de ${esc(y.day)} harás ${esc(orig.name)}; luego todo vuelve a ser como antes. «Intercambiar siempre»: los cambia de día en tu rutina.</p></div>`}
   return h+`</div></div>`}
-const _renderSwap=render;render=function(){_renderSwap();if(!ui.swap)ui.swapShown=false;if(ui.swap&&ui.tab==="entreno"){document.getElementById("view").insertAdjacentHTML("beforeend",swapHTML());syncOverlay()}};
+function consumePend(){const P=S.settings&&S.settings.pendSwaps;if(!P||!P.length)return;let ch=false;
+  S.settings.pendSwaps=P.filter(q=>{for(const k in S.logs){const L=S.logs[k];if(k>q.from&&L.dayId===q.dayId&&L.entries&&Object.keys(L.entries).length&&!(ui.focus&&ui.focus.date===k)){const sws=todaySwaps();if(!sws[k])sws[k]={dayId:q.dayId,map:{...q.map}};ch=true;return false}}
+    if(q.from<addDays(TODAY,-60)){ch=true;return false}return true});if(ch)saveExtra("settings")}
+const _renderSwap=render;render=function(){try{consumePend()}catch(e){}_renderSwap();if(!ui.swap)ui.swapShown=false;if(ui.swap&&ui.tab==="entreno"){document.getElementById("view").insertAdjacentHTML("beforeend",swapHTML());syncOverlay()}};
 document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
   if(a==="swapopen"){ui.swap={id:b.dataset.id,date:ui.focus&&ui.focus.date?ui.focus.date:ui.date,pick:null};render();return}
   if(!ui.swap)return;
   if(a==="swapclose"){if(e.target.closest(".sheet")&&!b.classList.contains("del"))return;ui.swap=null;render();return}
   if(a==="swappick"){ui.swap.pick=b.dataset.v;render();setTimeout(()=>document.querySelector(".swapact")?.scrollIntoView({block:"nearest",behavior:"smooth"}),30);return}
-  if(a==="swapundo"){const sw=todaySwaps()[ui.swap.date];if(sw&&sw.map)delete sw.map[ui.swap.id];saveExtra("settings");ui.swap=null;render();toast("Cambio deshecho");return}
+  if(a==="swapundo"){const sw=todaySwaps()[ui.swap.date];const was=sw&&sw.map?sw.map[ui.swap.id]:null;if(sw&&sw.map)delete sw.map[ui.swap.id];
+    if(was&&S.settings.pendSwaps)S.settings.pendSwaps=S.settings.pendSwaps.filter(q=>!(q.from===ui.swap.date&&q.map[was]===ui.swap.id));saveExtra("settings");ui.swap=null;render();toast("Cambio deshecho");return}
   if(a==="swaptoday"){const W=ui.swap;const sws=todaySwaps();let sw=sws[W.date];if(!sw||sw.dayId!==selDay)sw=sws[W.date]={dayId:selDay,map:{}};
     for(const k in sw.map)if(sw.map[k]===W.pick)delete sw.map[k];sw.map[W.id]=W.pick;saveExtra("settings");
     const y=exIndex()[W.pick];ui.swap=null;render();toast(`Hoy haces ${y?y.name:"el otro ejercicio"}`);return}
+  if(a==="swaponce"){const W=ui.swap;let d2=null;for(const o of S.routine.days)if(o.id!==selDay&&o.ex.some(x=>x.id===W.pick)){d2=o;break}
+    if(!d2){ui.swap=null;render();return}
+    const sws=todaySwaps();let sw=sws[W.date];if(!sw||sw.dayId!==selDay)sw=sws[W.date]={dayId:selDay,map:{}};
+    for(const k in sw.map)if(sw.map[k]===W.pick)delete sw.map[k];sw.map[W.id]=W.pick;
+    const P=S.settings.pendSwaps=(S.settings.pendSwaps||[]).filter(q=>!(q.dayId===d2.id&&(q.map[W.pick]||Object.values(q.map).includes(W.id))));
+    P.push({dayId:d2.id,from:W.date,map:{[W.pick]:W.id}});saveExtra("settings");
+    const y=exIndex()[W.pick],o=exIndex()[W.id];ui.swap=null;render();toast(`Hoy ${y?y.name:"el otro"}; el próximo ${d2.name} harás ${o?o.name:"este"}`);return}
   if(a==="swapforever"){const W=ui.swap;const d1=rawDay(selDay);const i1=d1.ex.findIndex(x=>x.id===W.id);let d2=null,i2=-1;for(const o of S.routine.days){const j=o.ex.findIndex(x=>x.id===W.pick);if(j>=0&&o!==d1){d2=o;i2=j;break}}
     if(i1<0||!d2){ui.swap=null;render();return}
     const a1=d1.ex[i1],a2=d2.ex[i2];d1.ex[i1]=a2;d2.ex[i2]=a1;
