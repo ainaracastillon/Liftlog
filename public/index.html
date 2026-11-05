@@ -580,9 +580,12 @@ let toastT;function toast(m){let t=$(".toast");if(!t){t=document.createElement("
 /* ---------- datos derivados ---------- */
 const sortedDates=()=>Object.keys(S.logs).sort();
 const rawDay=id=>S.routine.days.find(d=>d.id===id);
-let dayById=id=>{const d=rawDay(id);if(!d||ui.tab!=="entreno")return d;const date=ui.focus&&ui.focus.date?ui.focus.date:ui.date;let sw=S.settings&&S.settings.swaps&&S.settings.swaps[date];
-  if(!sw||sw.dayId!==id){const pend=(S.settings&&S.settings.pendSwaps||[]).filter(q=>q.dayId===id&&q.from<date);if(pend.length){sw={dayId:id,map:{}};pend.forEach(q=>Object.assign(sw.map,q.map))}}
-  if(!sw||sw.dayId!==id||!sw.map||!Object.keys(sw.map).length)return d;
+const swapDate=()=>ui.focus&&!ui.focus.done&&ui.focus.date?ui.focus.date:TODAY;
+let dayById=id=>{const d=rawDay(id);if(!d||ui.tab!=="entreno")return d;const date=swapDate();const own=S.settings&&S.settings.swaps&&S.settings.swaps[date];
+  const sw={dayId:id,map:{}};(S.settings&&S.settings.pendSwaps||[]).filter(q=>q.dayId===id&&q.from<date).forEach(q=>Object.assign(sw.map,q.map));
+  if(own&&own.dayId===id&&own.map)Object.assign(sw.map,own.map);
+  for(const k in sw.map)if(!d.ex.some(x=>x.id===k)||d.ex.some(x=>x.id===sw.map[k]))delete sw.map[k];
+  if(!Object.keys(sw.map).length)return d;
   return {...d,ex:d.ex.map(x=>{const nid=sw.map[x.id];if(!nid)return x;for(const o of S.routine.days){const y=o.ex.find(z=>z.id===nid);if(y)return Object.assign(Object.create(y),{swappedFrom:x,fromDay:o.name})}return x})}};
 function exIndex(){const m={};S.routine.days.forEach(d=>d.ex.forEach(x=>m[x.id]={...x,day:d.name}));for(const k of sortedDates()){const L=S.logs[k];for(const id in L.entries||{})if(!m[id])m[id]={id,name:L.entries[id].name,day:L.dayName,orphan:true}}return m}
 const validSets=sets=>(sets||[]).filter(s=>num(s.w)!=null&&num(s.r)!=null&&num(s.r)>0);
@@ -693,7 +696,7 @@ function vDaySum(ds){
   for(const id in L.entries){const e=L.entries[id];const vs=validSets(e.sets);if(!vs.length)continue;sets+=vs.length;vs.forEach(s=>vol+=num(s.w)*num(s.r));const b=compare(id,ds,vs);if(b.some(x=>x[0]==="pr"))prs++;ex.push({id,name:e.name||(exIndex()[id]||{}).name||"Ejercicio",vs,b})}
   h+=`<div class="ds-rut">${esc(L.dayName||"Entreno")}</div>`;
   h+=`<div class="ds-kpis"><div>${ui.durEdit===ds?`<form id="durform" class="durform" data-d="${ds}" novalidate><input class="txt" id="durmin" inputmode="numeric" value="${Math.round((durOf(L)||{s:0}).s/60)}" aria-label="Minutos"><span>min</span><button class="btn small primary" type="submit">OK</button></form>`:`<b>${fmtDur(durOf(L).s)}</b><span>${durOf(L).est?"aprox. · ":""}duración <button class="linkbtn" data-act="duredit" data-d="${ds}">Editar</button></span>`}</div><div><b>${ex.length}</b><span>ejercicios</span></div><div><b>${sets}</b><span>series</span></div><div><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+" t":fmtN(vol)+" kg"}</b><span>levantados</span></div></div>`;
-  {const K=kcalOf(L);if(K)h+=`<p class="ds-kcal"><b>≈ ${K.k} kcal</b> quemadas <span class="hint">· ${K.real?`con tu peso de ${fmtKg(K.kg)} kg`:`con ${K.kg} kg de referencia; apunta tu peso en Medidas para afinarlo`}</span></p>`}
+  {const K=kcalOf(L);if(K)h+=`<p class="ds-kcal"><b>≈ ${K.k} kcal</b> quemadas <span class="hint">· ${K.real?`con tu peso de ${fmtKg(K.kg)} kg`:`con ${K.kg} kg de referencia`}</span> <button class="linkbtn" data-act="gomedidas">${K.real?"Cambiar peso":"Apuntar mi peso"}</button></p>`}
   if(prs)h+=`<p class="ds-pr">${prs} récord${prs===1?"":"s"} personal${prs===1?"":"es"} este día</p>`;
   h+=`<div class="ds-list">${ex.map(x=>`<div class="ds-ex"><div class="ds-exh"><b>${esc(x.name)}</b><span class="ds-b">${x.b.slice(0,1).map(([c,tx])=>`<span class="badge ${c}">${tx}</span>`).join("")}</span></div><div class="ds-sets">${x.vs.map((s,i)=>`<span class="set-pill">${fmtKg(num(s.w))}<em>(${num(s.r)})</em></span>`).join("")}</div></div>`).join("")}</div>`;
   h+=`<button class="btn" style="width:100%;margin-top:12px" data-act="${ds===TODAY?"goday":"caledit"}" data-d="${ds}">${ds===TODAY?"Ir a Entreno":"Editar este entreno"}</button></div>`;
@@ -1931,6 +1934,9 @@ function restoreFocus(v){
   if(ui.focus)return;
   if(!v){try{v=JSON.parse(localStorage.getItem(FKEY)||"null")}catch(e){v=null}if(v&&SERVER&&v.uid&&v.uid!==SERVER.user.id)v=null}
   if(!v||!v.start||!dayById(v.dayId))return;
+  if(v.date&&v.date<dstr(new Date())){const L=S.logs[v.date];
+    if(L&&!L.duration){let last=0;for(const k in L.entries||{})for(const z of L.entries[k].sets||[])if(z.t>last)last=z.t;if(last>v.start){L.duration=Math.round((last-v.start)/1000)+60;persist("log-"+v.date)}}
+    try{localStorage.removeItem(FKEY)}catch(e){}if(store)store.ref(keyFor(ALL.active,"focus")).delete().catch(()=>{});lastFocusJSON="null";return}
   if(v.pid&&v.pid!==ALL.active&&ALL.data[v.pid])switchProfile(v.pid);
   ui.focus={i:v.i||0,start:v.start,date:v.date,dayId:v.dayId,cur:v.cur||{},snap:v.snap||null,added:v.added||0};
   ui.date=v.date;selDay=v.dayId;ui._lastDate=v.date;ui.tab="entreno";
@@ -1953,7 +1959,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(
   if(a==="focusstart")setTimeout(keepAwake,0);
   if(a==="focuscancelyes"||a==="focusend"){releaseAwake();try{localStorage.removeItem(FKEY)}catch(e){}setTimeout(()=>{saveFocus(true);if(window.__updPending)checkUpdate()},0)}
   if(ui.focus)setTimeout(()=>saveFocus(),0)});
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")keepAwake();else{saveFocus(true);if(typeof flushWrites==="function")flushWrites()}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&dstr(new Date())!==TODAY&&!(ui.focus&&!ui.focus.done&&ui.focus.date===dstr(new Date()))){saveFocus(true);location.reload();return}if(document.visibilityState==="visible")keepAwake();else{saveFocus(true);if(typeof flushWrites==="function")flushWrites()}});
 window.addEventListener("pagehide",()=>{saveFocus(true)});
 /* no recargar por actualizaciones en mitad de un entreno */
 const _checkUpdate0=checkUpdate;
@@ -2076,7 +2082,7 @@ function consumePend(){const P=S.settings&&S.settings.pendSwaps;if(!P||!P.length
     if(q.from<addDays(TODAY,-60)){ch=true;return false}return true});if(ch)saveExtra("settings")}
 const _renderSwap=render;render=function(){try{consumePend()}catch(e){}_renderSwap();if(!ui.swap)ui.swapShown=false;if(ui.swap&&ui.tab==="entreno"){document.getElementById("view").insertAdjacentHTML("beforeend",swapHTML());syncOverlay()}};
 document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
-  if(a==="swapopen"){ui.swap={id:b.dataset.id,date:ui.focus&&ui.focus.date?ui.focus.date:ui.date,pick:null};render();return}
+  if(a==="swapopen"){ui.swap={id:b.dataset.id,date:swapDate(),pick:null};render();return}
   if(!ui.swap)return;
   if(a==="swapclose"){if(e.target.closest(".sheet")&&!b.classList.contains("del"))return;ui.swap=null;render();return}
   if(a==="swappick"){ui.swap.pick=b.dataset.v;render();setTimeout(()=>document.querySelector(".swapact")?.scrollIntoView({block:"nearest",behavior:"smooth"}),30);return}
@@ -2098,6 +2104,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(
     const sw=todaySwaps()[W.date];if(sw&&sw.map){delete sw.map[W.id];saveExtra("settings")}
     persist("routine");ui.swap=null;render();toast(`${a2.name} pasa a ${d1.name} y ${a1.name} a ${d2.name}`);return}
 },true);
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act=gomedidas]");if(!b)return;e.stopPropagation();ui.calSel=null;ui.tab="progreso";ui.prog="medidas";ui.meas="peso";render();try{toTop()}catch(_){}setTimeout(()=>document.getElementById("measform")?.scrollIntoView({block:"center",behavior:"smooth"}),80)},true);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ui.swap){ui.swap=null;render()}});
 
 render();
