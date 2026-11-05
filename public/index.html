@@ -417,6 +417,7 @@ body.modal-open,body.modal-open main{overflow:hidden!important;touch-action:none
 .ds-h b{display:block;font-family:var(--display);font-weight:700;font-size:26px;line-height:1.1}
 .ds-rut{font-weight:600;color:var(--accent);margin-top:2px}
 .ds-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:12px 0 4px}
+.ds-kcal{margin:8px 0 2px;font-size:14px;color:var(--fg)}.ds-kcal b{color:var(--accent);font-weight:700}
 .ds-kpis b{display:block;font-family:var(--display);font-size:20px;line-height:1.1}
 .ds-kpis span{font-size:11.5px;color:var(--muted)}
 .ds-pr{margin:8px 0 0;font-size:13.5px;font-weight:600;color:var(--accent)}
@@ -660,6 +661,9 @@ function durOf(L){if(!L)return null;if(L.duration)return{s:L.duration,est:!!L.du
   let ts=[],n=0;for(const k in L.entries||{})for(const s of validSets(L.entries[k].sets)){n++;if(s.t)ts.push(s.t)}
   if(!n)return null;if(ts.length>=2){ts.sort((a,b)=>a-b);return{s:Math.max(60,(ts[ts.length-1]-ts[0])/1000+120),est:true}}
   return{s:n*150,est:true}}
+function bodyKg(){const M=(S.measures||[]).filter(m=>num(m.peso)>0).sort((a,b)=>a.date.localeCompare(b.date));return M.length?num(M[M.length-1].peso):null}
+function kcalOf(L){const D=durOf(L);if(!D)return null;let n=0;for(const k in L.entries||{})n+=validSets(L.entries[k].sets).length;const min=D.s/60;if(!n||min<=0)return null;
+  const dens=n/min;const met=Math.min(6,Math.max(3.5,3.5+(dens-0.25)*6));const kg=bodyKg();return{k:Math.round(met*(kg||65)*min/60),kg:kg||65,real:!!kg}}
 const fmtDur=s=>{s=Math.round(s||0);if(s<60)return s+" s";const m=Math.round(s/60);return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")};
 const fmtDurShort=s=>{const m=Math.max(1,Math.round((s||0)/60));return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")};
 function vDayEdit(ds){
@@ -689,6 +693,7 @@ function vDaySum(ds){
   for(const id in L.entries){const e=L.entries[id];const vs=validSets(e.sets);if(!vs.length)continue;sets+=vs.length;vs.forEach(s=>vol+=num(s.w)*num(s.r));const b=compare(id,ds,vs);if(b.some(x=>x[0]==="pr"))prs++;ex.push({id,name:e.name||(exIndex()[id]||{}).name||"Ejercicio",vs,b})}
   h+=`<div class="ds-rut">${esc(L.dayName||"Entreno")}</div>`;
   h+=`<div class="ds-kpis"><div>${ui.durEdit===ds?`<form id="durform" class="durform" data-d="${ds}" novalidate><input class="txt" id="durmin" inputmode="numeric" value="${Math.round((durOf(L)||{s:0}).s/60)}" aria-label="Minutos"><span>min</span><button class="btn small primary" type="submit">OK</button></form>`:`<b>${fmtDur(durOf(L).s)}</b><span>${durOf(L).est?"aprox. · ":""}duración <button class="linkbtn" data-act="duredit" data-d="${ds}">Editar</button></span>`}</div><div><b>${ex.length}</b><span>ejercicios</span></div><div><b>${sets}</b><span>series</span></div><div><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+" t":fmtN(vol)+" kg"}</b><span>levantados</span></div></div>`;
+  {const K=kcalOf(L);if(K)h+=`<p class="ds-kcal"><b>≈ ${K.k} kcal</b> quemadas <span class="hint">· ${K.real?`con tu peso de ${fmtKg(K.kg)} kg`:`con ${K.kg} kg de referencia; apunta tu peso en Medidas para afinarlo`}</span></p>`}
   if(prs)h+=`<p class="ds-pr">${prs} récord${prs===1?"":"s"} personal${prs===1?"":"es"} este día</p>`;
   h+=`<div class="ds-list">${ex.map(x=>`<div class="ds-ex"><div class="ds-exh"><b>${esc(x.name)}</b><span class="ds-b">${x.b.slice(0,1).map(([c,tx])=>`<span class="badge ${c}">${tx}</span>`).join("")}</span></div><div class="ds-sets">${x.vs.map((s,i)=>`<span class="set-pill">${fmtKg(num(s.w))}<em>(${num(s.r)})</em></span>`).join("")}</div></div>`).join("")}</div>`;
   h+=`<button class="btn" style="width:100%;margin-top:12px" data-act="${ds===TODAY?"goday":"caledit"}" data-d="${ds}">${ds===TODAY?"Ir a Entreno":"Editar este entreno"}</button></div>`;
@@ -709,6 +714,7 @@ function vCal(){
     h+=`<button class="${done||isLive?"done":""} ${pl?"plan":""} ${ds===TODAY?"today":""} ${ui.calSel===ds?"sel":""}" data-act="calday" data-d="${ds}" aria-pressed="${ui.calSel===ds}" aria-label="${longDate(ds)}${done?", "+esc(L.dayName)+(DU?", "+fmtDur(DU.s):""):pl?", toca "+esc(pl.name):""}"><span class="num">${d}</span>${done?`<span class="tag">${esc(L.dayName)}</span>`:pl?`<span class="tag">${esc(pl.name)}</span>`:isLive?`<span class="tag">${esc((dayById(live.dayId)||{}).name||"")}</span>`:""}${dtag}</button>`}
   h+=`</div></div><div class="calside"><p class="hint calhint">Toca un día para ver el resumen del entreno.</p>`;
   h+=`<div class="stats stats4"><div class="stat"><b>${monthLogs.length}</b><span>entrenos</span></div><div class="stat"><b>${dur?fmtDur(dur):"—"}</b><span>tiempo entrenando</span></div><div class="stat"><b>${sets}</b><span>series</span></div><div class="stat"><b>${vol>=1000?fmtKg(Math.round(vol/100)/10)+"t":fmtKg(Math.round(vol))}</b><span>${vol>=1000?"tonelaje":"kg movidos"}</span></div></div>`;
+  {let kc=0;monthLogs.forEach(d=>{const K=kcalOf(S.logs[d]);if(K)kc+=K.k});if(kc)h+=`<p class="ds-kcal" style="margin:0 0 12px"><b>≈ ${fmtN(kc)} kcal</b> quemadas este mes</p>`}
   if(monthLogs.length){h+=`<div class="eyebrow" style="margin:6px 0 8px">Sesiones del mes</div><div class="card hist">${monthLogs.slice().reverse().map(d=>{const L=S.logs[d];const ups=Object.keys(L.entries).map(k=>compare(k,d,L.entries[k].sets)[0]).filter(Boolean);const nu=ups.filter(b=>b[0]==="up"||b[0]==="pr").length,ndn=ups.filter(b=>b[0]==="down").length;return`<button class="h ${ui.calSel===d?"hsel":""}" data-act="calday" data-d="${d}" style="background:none;border:0;border-top:1px solid var(--line);text-align:left;width:100%"><span class="dt">${shortDate(d)}</span><span><b style="font-weight:600">${esc(L.dayName)}</b><br><span class="hint">${Object.keys(L.entries).length} ejercicios${durOf(L)?" · "+(durOf(L).est?"≈ ":"")+fmtDur(durOf(L).s):""}</span></span><span style="display:flex;gap:4px">${nu?`<span class="badge up">↑ ${nu}</span>`:""}${ndn?`<span class="badge down">↓ ${ndn}</span>`:""}</span></button>`}).join("")}</div>`}
   else h+=`<div class="card empty">Sin entrenos apuntados este mes.<br>Toca un día para registrarlo.</div>`;
   h+=`</div></div>`;
