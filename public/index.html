@@ -451,6 +451,16 @@ body.modal-open,body.modal-open main{overflow:hidden!important;touch-action:none
 .fval b{font-family:var(--display);font-size:46px;line-height:1;font-variant-numeric:tabular-nums;border-bottom:2px dashed var(--line)}
 .fval span{color:var(--muted);font-size:14px}
 .padval small{font-size:18px;color:var(--muted);font-family:var(--body)}
+.swapbtn{width:38px;height:38px;border:1px solid var(--line);background:var(--surface);color:var(--accent);border-radius:10px;font-size:18px;font-weight:700;margin-right:6px;flex:0 0 auto;padding:0}
+.swapbtn:hover{background:var(--accent-soft)}
+.swaptag{display:block;font-size:12.5px;font-weight:600;color:var(--accent);margin-top:2px}
+.swapday{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.swapopt{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px}
+.swapopt b{font-weight:600;font-size:15px}
+.swapopt.on{border-color:var(--accent);background:var(--accent-soft)}
+.swapnow{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--accent-soft);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:14px}
+.swapact{position:sticky;bottom:-18px;background:var(--surface);padding:12px 0 4px;margin-top:12px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px}
+.swapact .btn{flex:1 1 140px;height:46px}
 .confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-x:none}
@@ -568,7 +578,10 @@ let toastT;function toast(m){let t=$(".toast");if(!t){t=document.createElement("
 
 /* ---------- datos derivados ---------- */
 const sortedDates=()=>Object.keys(S.logs).sort();
-const dayById=id=>S.routine.days.find(d=>d.id===id);
+const rawDay=id=>S.routine.days.find(d=>d.id===id);
+let dayById=id=>{const d=rawDay(id);if(!d||ui.tab!=="entreno")return d;const date=ui.focus&&ui.focus.date?ui.focus.date:ui.date;const sw=S.settings&&S.settings.swaps&&S.settings.swaps[date];
+  if(!sw||sw.dayId!==id||!sw.map||!Object.keys(sw.map).length)return d;
+  return {...d,ex:d.ex.map(x=>{const nid=sw.map[x.id];if(!nid)return x;for(const o of S.routine.days){const y=o.ex.find(z=>z.id===nid);if(y)return Object.assign(Object.create(y),{swappedFrom:x,fromDay:o.name})}return x})}};
 function exIndex(){const m={};S.routine.days.forEach(d=>d.ex.forEach(x=>m[x.id]={...x,day:d.name}));for(const k of sortedDates()){const L=S.logs[k];for(const id in L.entries||{})if(!m[id])m[id]={id,name:L.entries[id].name,day:L.dayName,orphan:true}}return m}
 const validSets=sets=>(sets||[]).filter(s=>num(s.w)!=null&&num(s.r)!=null&&num(s.r)>0);
 function prevFor(exId,date){const ds=sortedDates().filter(d=>d<date).reverse();for(const d of ds){const e=S.logs[d].entries?.[exId];if(e&&validSets(e.sets).length)return{date:d,sets:validSets(e.sets)}}return null}
@@ -619,8 +632,8 @@ function vEntreno(){
     const rows=sets.length?sets:[{w:"",r:""}];
     const prev=prevFor(x.id,ui.date);
     h+=`<div class="card" data-ex="${x.id}">
-      <div class="ex-h"><div class="n"><b>${esc(x.name)}</b><span>Objetivo ${x.sets} × ${esc(x.reps)} reps</span></div>
-      <button class="eyebtn" data-act="exinfo" data-id="${x.id}" aria-expanded="${!!(ui.info&&ui.info[x.id])}" aria-label="${ui.info&&ui.info[x.id]?"Ocultar":"Ver"} cómo se hace ${esc(x.name)}">${ui.info&&ui.info[x.id]?EYE_OFF:EYE}</button></div>
+      <div class="ex-h"><div class="n"><b>${esc(x.name)}</b><span>Objetivo ${x.sets} × ${esc(x.reps)} reps</span>${x.swappedFrom?`<span class="swaptag">⇄ En lugar de ${esc(x.swappedFrom.name)} · de ${esc(x.fromDay)}</span>`:""}</div>
+      <button class="swapbtn" data-act="swapopen" data-id="${x.swappedFrom?x.swappedFrom.id:x.id}" aria-label="Cambiar ${esc(x.name)} por otro ejercicio">⇄</button><button class="eyebtn" data-act="exinfo" data-id="${x.id}" aria-expanded="${!!(ui.info&&ui.info[x.id])}" aria-label="${ui.info&&ui.info[x.id]?"Ocultar":"Ver"} cómo se hace ${esc(x.name)}">${ui.info&&ui.info[x.id]?EYE_OFF:EYE}</button></div>
       ${ui.info&&ui.info[x.id]?infoHTML(x.name):""}
       <div class="prev">${prev?`Última vez · ${shortDate(prev.date)} ${prev.sets.map(s=>`<span class="set-pill">${fmtKg(num(s.w))}<em>(${num(s.r)})</em></span>`).join("")}`:"Sin registros anteriores"}</div>
       ${sugHTML(x,prev)}
@@ -1752,7 +1765,7 @@ function vFocus(){
   <div class="fdots">${day.ex.map((e,i)=>{const L2=S.logs[ui.date];const n=validSets(L2&&L2.dayId===selDay&&L2.entries[e.id]?L2.entries[e.id].sets:[]).length;return`<button class="fdot ${i===F.i?"cur":""} ${n>=(+e.sets||1)?"ok":n?"half":""}" data-act="focusgo" data-v="${i}" aria-label="${esc(e.name)}"></button>`}).join("")}</div>
   <label class="daysel fpick"><span class="eyebrow">Ejercicio</span><span class="dsw"><select id="focussel" aria-label="Elegir ejercicio">${day.ex.map((e,i)=>{const L2=S.logs[ui.date];const n=validSets(L2&&L2.dayId===selDay&&L2.entries[e.id]?L2.entries[e.id].sets:[]).length;const tot=+e.sets||1;return`<option value="${i}" ${i===F.i?"selected":""}>${esc(e.name||"Ejercicio")} · ${n}/${tot}${n>=tot?" ✓":""}</option>`}).join("")}</select><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></label>
   <div class="ex-h" style="margin-top:14px"><div class="n"><h2 class="sec" style="font-size:30px">${esc(x.name)}</h2><span>Objetivo ${x.sets} × ${esc(x.reps)} reps${x.note?` · <i>${esc(x.note)}</i>`:""}</span></div>
-  <button class="eyebtn" data-act="exinfo" data-id="${x.id}" aria-expanded="${!!(ui.info&&ui.info[x.id])}" aria-label="Ver cómo se hace">${ui.info&&ui.info[x.id]?EYE_OFF:EYE}</button></div>
+  <button class="swapbtn" data-act="swapopen" data-id="${x.swappedFrom?x.swappedFrom.id:x.id}" aria-label="Cambiar ${esc(x.name)} por otro ejercicio">⇄</button><button class="eyebtn" data-act="exinfo" data-id="${x.id}" aria-expanded="${!!(ui.info&&ui.info[x.id])}" aria-label="Ver cómo se hace">${ui.info&&ui.info[x.id]?EYE_OFF:EYE}</button></div>
   ${ui.info&&ui.info[x.id]?infoHTML(x.name):""}
   ${prev?`<div class="prev">Última vez · ${shortDate(prev.date)} ${prev.sets.map(z=>`<span class="set-pill">${fmtKg(num(z.w))}<em>(${num(z.r)})</em></span>`).join("")}</div>`:""}
   ${s?`<p class="hint" style="margin:6px 0 0">Sugerencia: <b style="color:var(--accent)">${fmtKg(s.w)} kg × ${s.r}</b></p>`:""}
@@ -2037,6 +2050,37 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(
   if(a==="numok"){const P=ui.numPad;const c=ui.focus.cur[P.exId];const n=num(P.val);if(P.k==="w"){if(n!=null&&n>=0)c.w=Math.round(n*100)/100}else{const r=parseInt(P.val,10);if(r>0)c.r=r}ui.numPad=null;render();return}
 },true);
 document.addEventListener("keydown",e=>{if(!ui.numPad)return;const k=e.key===","||e.key==="."?",":e.key;if(/^[0-9,]$/.test(k)){e.preventDefault();document.querySelector(`[data-act=numkey][data-v="${k}"]`)?.click()}else if(e.key==="Backspace"){e.preventDefault();document.querySelector('[data-act=numkey][data-v="del"]')?.click()}else if(e.key==="Enter"){e.preventDefault();document.querySelector("[data-act=numok]")?.click()}else if(e.key==="Escape"){ui.numPad=null;render()}});
+
+/* ===== cambiar un ejercicio por otro de la rutina de otro día ===== */
+function todaySwaps(){S.settings.swaps=S.settings.swaps||{};for(const d in S.settings.swaps)if(d<addDays(TODAY,-7))delete S.settings.swaps[d];return S.settings.swaps}
+function swapHTML(){const W=ui.swap;const day=rawDay(selDay);const orig=day&&day.ex.find(x=>x.id===W.id);if(!orig){return""}
+  const sw=(todaySwaps()[W.date]||{});const cur=sw.dayId===day.id&&sw.map?sw.map[orig.id]:null;
+  const others=S.routine.days.filter(d=>d.id!==day.id&&d.ex.length);
+  const anim=!ui.swapShown;ui.swapShown=true;const sel=W.pick;
+  let h=`<div class="modal ${anim?"":"noanim"}" data-act="swapclose" role="presentation"><div class="sheet" role="dialog" aria-modal="true" aria-label="Cambiar ejercicio"><span class="grab" aria-hidden="true"></span>
+  <div class="ds-h"><div><span class="eyebrow">Cambiar ejercicio</span><b style="font-size:24px">${esc(orig.name)}</b><span class="hint">¿No está libre la máquina? Elige otro de tu rutina.</span></div><button class="del" data-act="swapclose" aria-label="Cerrar">${ICON.x}</button></div>`;
+  if(cur)h+=`<div class="swapnow"><span>Hoy lo has cambiado por <b>${esc((exIndex()[cur]||{}).name||"otro")}</b></span><button class="btn small" data-act="swapundo">Deshacer</button></div>`;
+  if(!others.length)h+=`<p class="hint">Tu rutina solo tiene un día con ejercicios.</p>`;
+  h+=others.map(d=>`<div class="swapday"><span class="eyebrow">${esc(d.name)}${(d.wd||[]).length?" · "+wdText(d).toLowerCase():""}</span>${d.ex.map(y=>`<button class="swapopt ${sel===y.id?"on":""}" data-act="swappick" data-v="${y.id}" aria-pressed="${sel===y.id}"><b>${esc(y.name)}</b><span class="hint">${y.sets}×${esc(y.reps)}${findExercise(y.name)?" · "+esc(findExercise(y.name).g):""}</span></button>`).join("")}</div>`).join("");
+  if(sel){const y=exIndex()[sel];h+=`<div class="swapact"><button class="btn primary" data-act="swaptoday">Solo hoy</button><button class="btn" data-act="swapforever">Intercambiar en la rutina</button><p class="hint" style="margin:6px 0 0">«Solo hoy» hace ${esc(y.name)} en lugar de ${esc(orig.name)} hoy. «Intercambiar en la rutina» los cambia de día para siempre.</p></div>`}
+  return h+`</div></div>`}
+const _renderSwap=render;render=function(){_renderSwap();if(!ui.swap)ui.swapShown=false;if(ui.swap&&ui.tab==="entreno"){document.getElementById("view").insertAdjacentHTML("beforeend",swapHTML());syncOverlay()}};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
+  if(a==="swapopen"){ui.swap={id:b.dataset.id,date:ui.focus&&ui.focus.date?ui.focus.date:ui.date,pick:null};render();return}
+  if(!ui.swap)return;
+  if(a==="swapclose"){if(e.target.closest(".sheet")&&!b.classList.contains("del"))return;ui.swap=null;render();return}
+  if(a==="swappick"){ui.swap.pick=b.dataset.v;render();setTimeout(()=>document.querySelector(".swapact")?.scrollIntoView({block:"nearest",behavior:"smooth"}),30);return}
+  if(a==="swapundo"){const sw=todaySwaps()[ui.swap.date];if(sw&&sw.map)delete sw.map[ui.swap.id];saveExtra("settings");ui.swap=null;render();toast("Cambio deshecho");return}
+  if(a==="swaptoday"){const W=ui.swap;const sws=todaySwaps();let sw=sws[W.date];if(!sw||sw.dayId!==selDay)sw=sws[W.date]={dayId:selDay,map:{}};
+    for(const k in sw.map)if(sw.map[k]===W.pick)delete sw.map[k];sw.map[W.id]=W.pick;saveExtra("settings");
+    const y=exIndex()[W.pick];ui.swap=null;render();toast(`Hoy haces ${y?y.name:"el otro ejercicio"}`);return}
+  if(a==="swapforever"){const W=ui.swap;const d1=rawDay(selDay);const i1=d1.ex.findIndex(x=>x.id===W.id);let d2=null,i2=-1;for(const o of S.routine.days){const j=o.ex.findIndex(x=>x.id===W.pick);if(j>=0&&o!==d1){d2=o;i2=j;break}}
+    if(i1<0||!d2){ui.swap=null;render();return}
+    const a1=d1.ex[i1],a2=d2.ex[i2];d1.ex[i1]=a2;d2.ex[i2]=a1;
+    const sw=todaySwaps()[W.date];if(sw&&sw.map){delete sw.map[W.id];saveExtra("settings")}
+    persist("routine");ui.swap=null;render();toast(`${a2.name} pasa a ${d1.name} y ${a1.name} a ${d2.name}`);return}
+},true);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ui.swap){ui.swap=null;render()}});
 
 render();
 
