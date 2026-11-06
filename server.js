@@ -604,8 +604,10 @@ async function fetchQueuedImages() {
         status = resp.status;
         const mime = resp.headers.get("content-type") || "";
         if (resp.ok && mime.startsWith("image/")) {
-          const buf = Buffer.from(await resp.arrayBuffer());
-          await q("UPDATE images SET data = $2, mime = $3, status = $4, updated_at = now() WHERE key = $1", [r.key, buf, mime, status]);
+          let buf = Buffer.from(await resp.arrayBuffer());
+          let outMime = mime;
+          try { const sharp = require("sharp"); buf = await sharp(buf).resize({ width: 900, withoutEnlargement: true }).jpeg({ quality: 80, mozjpeg: true }).toBuffer(); outMime = "image/jpeg"; } catch (e) { console.error("sharp", e.message); }
+          await q("UPDATE images SET data = $2, mime = $3, status = $4, updated_at = now() WHERE key = $1", [r.key, buf, outMime, status]);
           continue;
         }
       } catch (e) { status = -1; }
