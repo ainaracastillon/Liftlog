@@ -90,6 +90,15 @@ async function migrate() {
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, friend_id)
   )`);
+  await q(`CREATE TABLE IF NOT EXISTS images (
+    key text PRIMARY KEY,
+    url text,
+    mime text,
+    data bytea,
+    status int,
+    tries int NOT NULL DEFAULT 0,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`);
   await q("DELETE FROM sessions WHERE created_at < now() - interval '90 days'");
 
   // Superadmin inicial, definido con variables de entorno (nunca en el código).
@@ -568,6 +577,43 @@ app.delete("/api/admin/users/:id", auth, admin, async (req, res, next) => {
 const BUILD = process.env.RENDER_GIT_COMMIT || String(Date.now());
 app.get("/api/version", (req, res) => { noCacheHdr(res); res.json({ build: BUILD }); });
 app.get("/healthz", (req, res) => res.send("ok"));
+// Imágenes de ejercicios: se guardan en la base de datos y se sirven desde aquí.
+app.get("/img/:key", async (req, res, next) => {
+  try {
+    const { rows } = await q("SELECT mime, data FROM images WHERE key = $1 AND data IS NOT NULL", [req.params.key]);
+    if (!rows.length) return res.status(404).end();
+    res.setHeader("Content-Type", rows[0].mime || "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.end(rows[0].data);
+  } catch (e) { next(e); }
+});
+app.get("/api/images", async (req, res, next) => {
+  try {
+    const { rows } = await q("SELECT key, updated_at FROM images WHERE data IS NOT NULL ORDER BY key");
+    noCacheHdr(res); res.json({ images: rows.map((r) => ({ key: r.key, v: new Date(r.updated_at).getTime() })) });
+  } catch (e) { next(e); }
+});
+// Cola: las filas con url y sin datos se descargan en segundo plano.
+async function fetchQueuedImages() {
+  try {
+    const { rows } = await q("SELECT key, url FROM images WHERE data IS NULL AND url IS NOT NULL AND tries < 3 LIMIT 5");
+    for (const r of rows) {
+      let status = 0;
+      try {
+        const resp = await fetch(r.url, { redirect: "follow" });
+        status = resp.status;
+        const mime = resp.headers.get("content-type") || "";
+        if (resp.ok && mime.startsWith("image/")) {
+          const buf = Buffer.from(await resp.arrayBuffer());
+          await q("UPDATE images SET data = $2, mime = $3, status = $4, updated_at = now() WHERE key = $1", [r.key, buf, mime, status]);
+          continue;
+        }
+      } catch (e) { status = -1; }
+      await q("UPDATE images SET status = $2, tries = tries + 1, updated_at = now() WHERE key = $1", [r.key, status]);
+    }
+  } catch (e) { console.error("cola de imágenes", e.message); }
+}
+setInterval(fetchQueuedImages, 15000);
 app.use("/api", (req, res) => res.status(404).json({ error: "No encontrado" }));
 // La página y el manifest nunca se guardan en caché: así cada cambio llega al momento.
 const noCache = (res) => noCacheHdr(res);
