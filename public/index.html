@@ -338,8 +338,9 @@ details summary::-webkit-details-marker{display:none}
 .focus-done{text-align:center}
 .focus-done .kpis{text-align:left}
 .fconfirm{margin-top:10px;border-color:var(--down)}
-.figrow{display:flex;align-items:center;gap:0;margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 6px 4px}
+.figrow{display:flex;align-items:center;gap:0;margin-top:10px;background:var(--fig-bg,#F7EEE3);border:1px solid var(--line);border-radius:12px;padding:6px 6px 4px}
 .excard .figrow{background:var(--surface-2);border-color:transparent}
+.figrow{--eq-m:#3A3A3F;--eq-a:#141416;--eq-p:#5B5B62;--bg:#F7EEE3;color:#6b5a4a}
 .figrow figure{flex:1;min-width:0;margin:0;text-align:center}
 .figrow.one figure{max-width:62%;margin:0 auto}
 .fig{width:100%;height:auto;display:block}
@@ -1129,34 +1130,43 @@ function joints(o){
 }
 function figure(o){
   const J=joints(o);const id="fg"+(++FIGN);let g="";
-  g+=`<defs><linearGradient id="${id}n" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9AD3F7"/><stop offset=".5" stop-color="#55A8E8"/><stop offset="1" stop-color="#2E77B8"/></linearGradient><linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6FAEDD"/><stop offset=".55" stop-color="#3B83C2"/><stop offset="1" stop-color="#245F97"/></linearGradient></defs>`;
-  const N=`url(#${id}n)`,F=J.fr?N:`url(#${id}f)`,ST="#1B4B78",STF=J.fr?ST:"#163F66";
+  g+=`<defs><linearGradient id="${id}n" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6D2B4"/><stop offset=".5" stop-color="#E2A983"/><stop offset="1" stop-color="#BF7E57"/></linearGradient><linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDA683"/><stop offset=".55" stop-color="#C08260"/><stop offset="1" stop-color="#99603F"/></linearGradient><linearGradient id="${id}k" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A3A3E"/><stop offset=".6" stop-color="#1B1B1E"/><stop offset="1" stop-color="#0A0A0B"/></linearGradient></defs>`;
+  const N=`url(#${id}n)`,F=J.fr?N:`url(#${id}f)`,K=`url(#${id}k)`,ST="#9A5F3E",STF=J.fr?ST:"#7E4C31";
   const footDir=o.fd??0,fd2=o.fd2??footDir;
   const shoe=(an,d,fill)=>{const r=d*Math.PI/180,ux=Math.cos(r),uy=Math.sin(r),nx=-uy,ny=ux;const sg=J.fr?0:1;
     const hb=[an[0]-ux*3.5,an[1]-uy*3.5],tp=[an[0]+ux*10,an[1]+uy*10];
     const pts=[[hb[0]+nx*3.2,hb[1]+ny*3.2],[tp[0]+nx*2.4,tp[1]+ny*2.4],[tp[0]+ux*1.6,tp[1]+uy*1.6],[tp[0]-nx*2.2,tp[1]-ny*2.2],[hb[0]-nx*3.4,hb[1]-ny*3.4],[hb[0]-ux*1.6,hb[1]-uy*1.6]];
-    return `<path d="M${pts.map(p=>P(...p)).join("L")}Z" fill="#E9EEF2" stroke="#4A5560" stroke-width=".9" stroke-linejoin="round"/><path d="M${P(...pts[4])}L${P(tp[0]-nx*2.2,tp[1]-ny*2.2)}" stroke="#4A5560" stroke-width="1.6"/>`};
+    return `<path d="M${pts.map(p=>P(...p)).join("L")}Z" fill="#FAFAFA" stroke="#9AA3AB" stroke-width=".9" stroke-linejoin="round"/><path d="M${P(...pts[4])}L${P(tp[0]-nx*2.2,tp[1]-ny*2.2)}" stroke="#C9CED3" stroke-width="2"/>`};
   const hand=(f,e,fill,st)=>{const d=Math.hypot(e[0]-f[0],e[1]-f[1])||1;const c=[e[0]+(e[0]-f[0])/d*2.6,e[1]+(e[1]-f[1])/d*2.6];return `<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="3.9" ry="3.4" fill="${fill}" stroke="${st}" stroke-width=".9"/>`};
   const leg=(H,lg,dir,fill,st)=>{const sh2=[H[0]+(lg[0][0]-H[0])*.5,H[1]+(lg[0][1]-H[1])*.5];
-    return limbS(H,lg[0],lg[1],PROF.th,PROF.sh,fill,st,5.4)+shape(H,sh2,[[0,8.9],[.6,8.6],[1,8.2]],"#2A3138","#14181c")+shoe(lg[1],J.fr?90:dir)};
+    return limbS(H,lg[0],lg[1],PROF.th,PROF.sh,fill,st,5.4)+shape(H,sh2,[[0,8.9],[.6,8.6],[1,8.2]],K,"#000")+shoe(lg[1],J.fr?90:dir)};
   const arm=(S,am,fill,st)=>limbS(S,am[0],am[1],PROF.ua,PROF.fa,fill,st,4.3)+hand(am[0],am[1],fill,st);
   if(!o.hideFar)g+=leg(J.H2,J.leg2,fd2,F,STF);
   if(!o.hideFar&&!J.fr)g+=arm(J.S2,J.arm2,F,STF);
   // tronco con camiseta ajustada (mismo tono) y pantalón
   g+=shape(J.p,J.s,J.fr?PROF.tsFront:PROF.tsSide,N,ST);
   const waist=[J.p[0]+J.td[0]*FG.T*.18,J.p[1]+J.td[1]*FG.T*.18];
-  g+=shape([J.p[0]-J.td[0]*2,J.p[1]-J.td[1]*2],waist,J.fr?[[0,12.8],[1,11.6]]:[[0,10.4],[1,8.9]],"#2A3138","#14181c");
+  g+=shape([J.p[0]-J.td[0]*2,J.p[1]-J.td[1]*2],waist,J.fr?[[0,12.8],[1,11.6]]:[[0,10.4],[1,8.9]],K,"#000");
+  {const L=t=>[J.p[0]+J.td[0]*FG.T*t,J.p[1]+J.td[1]*FG.T*t];g+=shape(L(.5),L(.86),J.fr?[[0,15.2],[.5,17],[1,16.4]]:[[0,10.9],[.6,10.2],[1,9.6]],K,"#000")}
   if(!J.fr){const ch=[J.p[0]+J.td[0]*FG.T*.66,J.p[1]+J.td[1]*FG.T*.66];const face=o.face??1;const pe=[-J.td[1]*face,J.td[0]*face];
-    g+=`<path d="M${P(ch[0]+pe[0]*9,ch[1]+pe[1]*9)}q${(-J.td[0]*6).toFixed(1)} ${(-J.td[1]*6).toFixed(1)} ${(pe[0]*-4).toFixed(1)} ${(pe[1]*-4).toFixed(1)}" fill="none" stroke="${ST}" stroke-width=".8" opacity=".6"/>`}
+    g+=`<path d="M${P(ch[0]+pe[0]*9,ch[1]+pe[1]*9)}q${(-J.td[0]*6).toFixed(1)} ${(-J.td[1]*6).toFixed(1)} ${(pe[0]*-4).toFixed(1)} ${(pe[1]*-4).toFixed(1)}" fill="none" stroke="#6a6a72" stroke-width=".8" opacity=".5"/>`}
   // cuello y cabeza
   const nk=[J.s[0]+(J.td[0]+(o.look?Math.cos(o.look*Math.PI/180):J.td[0]))*3,J.s[1]+(J.td[1]+(o.look?Math.sin(o.look*Math.PI/180):J.td[1]))*3];
   g+=shape(J.s,nk,[[0,4.6],[1,4]],N,ST);
   const hd=o.look?[Math.cos(o.look*Math.PI/180),Math.sin(o.look*Math.PI/180)]:J.td;
   const hc=[J.s[0]+J.td[0]*5+hd[0]*9.5,J.s[1]+J.td[1]*5+hd[1]*9.5];const rot=Math.atan2(hd[1],hd[0])*180/Math.PI+90;
   g+=`<ellipse cx="${hc[0].toFixed(1)}" cy="${hc[1].toFixed(1)}" rx="8" ry="9.6" transform="rotate(${rot.toFixed(1)} ${hc[0].toFixed(1)} ${hc[1].toFixed(1)})" fill="${N}" stroke="${ST}" stroke-width=".9"/>`;
+  {const HC="#3A2417",face=o.face??1;const pe=J.fr?[0,0]:[-hd[1]*face,hd[0]*face];const bk=[-pe[0],-pe[1]];const pts=[];
+    if(J.fr){for(let a=-15;a<=195;a+=15){const r=a*Math.PI/180;pts.push([hc[0]+Math.cos(r)*8.9,hc[1]-Math.sin(r)*9.6+(a<0||a>180?2:0)])}
+      g+=`<path d="M${pts.map(q=>P(...q)).join("L")}Q${P(hc[0],hc[1]-5)} ${P(...pts[0])}Z" fill="${HC}" stroke="#20130b" stroke-width=".6"/>`;
+      g+=`<ellipse cx="${hc[0].toFixed(1)}" cy="${(hc[1]-11.5).toFixed(1)}" rx="4.2" ry="3.2" fill="${HC}"/>`}
+    else{for(let a=-75;a<=100;a+=10){const r=a*Math.PI/180;const c=Math.cos(r),sn=Math.sin(r);pts.push([hc[0]+(bk[0]*c+hd[0]*sn)*8.9,hc[1]+(bk[1]*c+hd[1]*sn)*9.9])}
+      const tA=[hc[0]+bk[0]*7.5+hd[0]*5.5,hc[1]+bk[1]*7.5+hd[1]*5.5];const tB=[tA[0]+bk[0]*5,tA[1]+bk[1]*5+12];const tC=[tA[0]+bk[0]*2,tA[1]+bk[1]*2+20];
+      g+=`<path d="M${P(...tA)}Q${P(...tB)} ${P(...tC)}" fill="none" stroke="${HC}" stroke-width="5.2" stroke-linecap="round"/><circle cx="${tA[0].toFixed(1)}" cy="${tA[1].toFixed(1)}" r="3" fill="#1b1b1e"/>`;
+      g+=`<path d="M${pts.map(q=>P(...q)).join("L")}Q${P(hc[0]+pe[0]*2+hd[0]*3,hc[1]+pe[1]*2+hd[1]*3)} ${P(...pts[0])}Z" fill="${HC}" stroke="#20130b" stroke-width=".6"/>`}}
   if(!J.fr){const face=o.face??1;const pe=[-hd[1]*face,hd[0]*face];const tdh=hd;
     g+=`<circle cx="${(hc[0]+pe[0]*7.6+tdh[0]*1).toFixed(1)}" cy="${(hc[1]+pe[1]*7.6+tdh[1]*1).toFixed(1)}" r="1.7" fill="${N}" stroke="${ST}" stroke-width=".7"/>`;
-    g+=`<ellipse cx="${(hc[0]+pe[0]*4.4+tdh[0]*2).toFixed(1)}" cy="${(hc[1]+pe[1]*4.4+tdh[1]*2).toFixed(1)}" rx="1.5" ry="1.1" fill="#fff"/>`;
+    g+=`<ellipse cx="${(hc[0]+pe[0]*4.4+tdh[0]*2).toFixed(1)}" cy="${(hc[1]+pe[1]*4.4+tdh[1]*2).toFixed(1)}" rx="1.1" ry="1" fill="#2a1a12"/>`;
     g+=`<ellipse cx="${(hc[0]-pe[0]*1.5).toFixed(1)}" cy="${(hc[1]-pe[1]*1.5).toFixed(1)}" rx="2" ry="2.8" fill="${N}" stroke="${ST}" stroke-width=".7" opacity=".9" transform="rotate(${rot.toFixed(1)} ${(hc[0]-pe[0]*1.5).toFixed(1)} ${(hc[1]-pe[1]*1.5).toFixed(1)})"/>`}
   g+=leg(J.H1,J.leg1,footDir,N,ST);
   if(J.fr)g+=arm(J.S2,J.arm2,N,ST);
