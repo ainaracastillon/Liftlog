@@ -568,7 +568,7 @@ function writeDoc(dockey,fn){
 function persist(key,pid=ALL.active){
   const D=ALL.data[pid];
   writeDoc(keyFor(pid,key),ref=>{
-    if(key==="routine")return ref.set({days:D.routine.days});
+    if(key==="routine")return ref.set(D.routine.name?{name:D.routine.name,days:D.routine.days}:{days:D.routine.days});
     const d=key.slice(4);return D.logs[d]?ref.set(D.logs[d]):ref.delete();
   });
 }
@@ -734,7 +734,7 @@ function vRutina(){
   const open=ui.rutDay&&dayById(ui.rutDay);
   if(open)return vRutinaDia(open,days.indexOf(open));
   ui.rutDay=null;
-  let h=`<div class="row" style="justify-content:space-between;margin-bottom:6px"><div><span class="eyebrow">Tu semana</span><h2 class="sec">Días de gym</h2></div>
+  let h=`<div class="row" style="justify-content:space-between;margin-bottom:6px"><div><span class="eyebrow">${S.routine.name?esc(S.routine.name):"Tu semana"}</span><h2 class="sec">Días de gym</h2></div>
   <div class="stepper"><button data-act="dminus" aria-label="Quitar un día">−</button><b aria-live="polite">${days.length}</b><button data-act="dplus" aria-label="Añadir un día">+</button></div></div>
   <p class="hint" style="margin:0 0 14px">Toca un día para cambiar sus ejercicios, series, repeticiones y qué día de la semana te toca.</p>`;
   if(ui.confirm&&ui.confirm.startsWith("delday:")){const d=dayById(ui.confirm.slice(7));if(d)h+=`<div class="card confirm" style="margin-bottom:12px">¿Quitar el día «${esc(d.name)}»? Tus registros se conservan. <button class="btn small" data-act="deldayyes" data-id="${d.id}" style="color:var(--down)">Quitar</button><button class="btn small ghost" data-act="clearno">Cancelar</button></div>`}
@@ -1581,7 +1581,7 @@ document.addEventListener("click",async e=>{
     case"wzback":ui.wizard.step--;render();return;
     case"wznext":{const W=ui.wizard;const ok=(W.step===1&&W.goal)||(W.step===2&&W.days)||(W.step===3&&W.equip);if(!ok){W.err="Elige una opción para seguir.";render();return}
       if(W.step<3){W.step++;render();toTop();return}
-      S.routine.days=buildRoutine(W.goal,W.days,W.equip);persist("routine");ui.wizard=null;ui.rutDay=null;selDay=null;render();toTop();toast("Rutina creada. Toca un día para ajustarla");return}
+      S.routine.days=buildRoutine(W.goal,W.days,W.equip);delete S.routine.name;persist("routine");ui.wizard=null;ui.rutDay=null;selDay=null;render();toTop();toast("Rutina creada. Toca un día para ajustarla");return}
     case"frask":ui.frConfirm=id;render();return;
     case"frcancel":ui.frConfirm=null;render();return;
     case"fraccept":try{await api("POST","/api/friends/"+id+"/accept");toast("Ahora sois amigos");loadFriends()}catch(err){toast(err.message)}return;
@@ -1878,7 +1878,7 @@ document.addEventListener("submit",e=>{
   const f=e.target;
   if(f.id==="measform"){e.preventDefault();const m={id:uid(),date:$("#m-date").value||TODAY};let any=false;for(const [k] of MEAS){const v=num($("#m-"+k).value);if(v!=null){m[k]=v;any=true}}
     if(!any){ui.measErr="Escribe al menos una medida.";return render()}ui.measErr=null;S.measures.push(m);saveExtra("measures");toast("Medidas guardadas");render();return}
-  if(f.id==="tplform"){e.preventDefault();const name=$("#tplname").value.trim()||"Rutina "+(S.templates.length+1);S.templates.unshift({id:uid(),name,days:JSON.parse(JSON.stringify(S.routine.days)),savedAt:TODAY});saveExtra("templates");toast("Rutina guardada");render();return}
+  if(f.id==="tplform"){e.preventDefault();const name=$("#tplname").value.trim()||"Rutina "+(S.templates.length+1);S.templates.unshift({id:uid(),name,days:JSON.parse(JSON.stringify(S.routine.days)),savedAt:TODAY});S.routine.name=name;persist("routine");saveExtra("templates");toast("Rutina guardada");render();return}
 });
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act,id=b.dataset.id;
@@ -1916,7 +1916,7 @@ document.addEventListener("click",e=>{
     case"tplload":ui.tplConfirm=id;ui.tplDel=null;render();return;
     case"tpldel":ui.tplDel=id;ui.tplConfirm=null;render();return;
     case"tplno":ui.tplConfirm=null;ui.tplDel=null;render();return;
-    case"tplloadyes":{const t=S.templates.find(z=>z.id===id);if(t){S.routine.days=JSON.parse(JSON.stringify(t.days));persist("routine");selDay=null;toast("Ahora usas «"+t.name+"»")}ui.tplConfirm=null;render();return}
+    case"tplloadyes":{const t=S.templates.find(z=>z.id===id);if(t){S.routine.days=JSON.parse(JSON.stringify(t.days));S.routine.name=t.name;persist("routine");selDay=null;toast("Ahora usas «"+t.name+"»")}ui.tplConfirm=null;render();return}
     case"tpldelyes":S.templates=S.templates.filter(z=>z.id!==id);ui.tplDel=null;saveExtra("templates");render();return;
     case"remadd":{const time=($("#remtime")||{}).value||S.settings.remTime||"18:00";S.settings.remTime=time;saveExtra("settings");
       if(SERVER){(async()=>{await flushWrites();location.href="/api/reminders.ics?time="+encodeURIComponent(time)})()}else saveFile("liftlog-recordatorios.ics","text/calendar",buildICS(time));return}
@@ -2116,13 +2116,13 @@ function fromDocs(docs){
     if(id==="profiles"){if(Array.isArray(v.list)&&v.list.length)next.profiles=JSON.parse(JSON.stringify(v.list));continue}
     let pid="main",k=id;const t=id.indexOf("~");if(t>0){pid=id.slice(0,t);k=id.slice(t+1)}
     const D=next.data[pid]||(next.data[pid]={routine:{days:[]},logs:{}});
-    if(k==="routine")D.routine.days=JSON.parse(JSON.stringify(v.days||[]));else if(k.startsWith("log-"))D.logs[k.slice(4)]=JSON.parse(JSON.stringify(v));
+    if(k==="routine"){D.routine.days=JSON.parse(JSON.stringify(v.days||[]));if(v.name)D.routine.name=v.name;else delete D.routine.name}else if(k.startsWith("log-"))D.logs[k.slice(4)]=JSON.parse(JSON.stringify(v));
   }
   next.profiles.forEach(p=>{if(!next.data[p.id])next.data[p.id]={routine:{days:[]},logs:{}}});
   if(!next.profiles.find(p=>p.id===next.active))next.active=next.profiles[0].id;
   return next;
 }
-async function pushAll(){for(const p of ALL.profiles){const D=ALL.data[p.id];if(!D)continue;await store.ref(keyFor(p.id,"routine")).set({days:D.routine.days});for(const d in D.logs)await store.ref(keyFor(p.id,"log-"+d)).set(D.logs[d])}if(ALL.profiles.length>1||ALL.profiles[0].name!=="Yo")await store.ref("profiles").set({list:ALL.profiles})}
+async function pushAll(){for(const p of ALL.profiles){const D=ALL.data[p.id];if(!D)continue;await store.ref(keyFor(p.id,"routine")).set(D.routine.name?{name:D.routine.name,days:D.routine.days}:{days:D.routine.days});for(const d in D.logs)await store.ref(keyFor(p.id,"log-"+d)).set(D.logs[d])}if(ALL.profiles.length>1||ALL.profiles[0].name!=="Yo")await store.ref("profiles").set({list:ALL.profiles})}
 async function api(method,url,body){const r=await fetch(url,{method,headers:body?{"content-type":"application/json"}:{},body:body?JSON.stringify(body):undefined,credentials:"same-origin"});let j=null;try{j=await r.json()}catch(e){}if(!r.ok){const err=new Error(j&&j.error||"Error "+r.status);err.status=r.status;throw err}return j}
 function adopt(docs){
   if(docs.length){ALL=fromDocs(docs);S=ALL.data[ALL.active];saveLocal();selDay=null;ui.progEx=null}
